@@ -1,0 +1,22 @@
+# Node modules (Jangan lacak dependency raksasa ini)
+node_modules/
+packages/server/node_modules/
+packages/web/node_modules/
+
+# Environment Variables (Berisi password rahasia)
+.env
+.env.*
+
+# Build output
+dist/
+packages/web/dist/
+
+# Folder Dokumen NAS / Penyimpanan PDF
+storage/
+packages/server/storage/
+*.pdf
+*.png
+
+# Log files
+npm-debug.log*
+*.log

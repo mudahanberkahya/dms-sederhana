@@ -1,0 +1,20 @@
+{
+  "status": "commited",
+  "type": "frontend",
+  "scope": "codebase",
+  "localEndpoint": "http://localhost:3001",
+  "loginUser": "nawawi@astarahotel.com",
+  "loginPassword": "password123",
+  "executionArgs": {
+    "projectName": "DMS",
+    "projectPath": "d:\\DMS",
+    "testIds": [],
+    "additionalInstruction": "You MUST test the complete End-to-End Approval Workflow.\nInstructions:\n1. Log in with an admin or initiator account.\n2. Go to Upload, and upload the file \"d:\\DMS\\test_e2e_mock.pdf\" from the filesystem.\n3. Select Category: Purchase Order (PO). Select Branch: Astara Hotel. Submit for approval.\n4. Log out and log back in (or continue if admin) to the account assigned as Cost Control.\n5. Go to My Approvals, find the newly uploaded PO document, and click Approve & Sign.\n6. Verify the document moves to the next approver or is fully completed.\nTHIS IS A STRICT E2E SCENARIO. DO NOT just mock the UI states. You must physically upload that PDF file and follow the real routing.",
+    "serverMode": "production",
+    "envs": {
+      "API_KEY": "sk-user-Eal54Se0xvtSLpb5OxIIfC4TrIEmaHKV-91-yaF-V6X0n9_aYgvA_Sot8REfyBFlKmDLy5Pvt0adCCQFfGW0VtPSxQBiijFBaTsvDZ1oDhYkmGYO6n6CrgpnW0NVoHk29CE"
+    }
+  },
+  "serverPort": 52806,
+  "proxy": "http://17aee9a1-01f6-4689-931f-998a61e6099b:u6SDpxrhVYYFY6A8Ob7eXylQmr8HFru2@tun.testsprite.com:8080"
+}

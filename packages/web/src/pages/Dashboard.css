@@ -1,0 +1,242 @@
+/* Dashboard Page Styles */
+
+/* ==================== STATS GRID ==================== */
+
+.stats-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 16px;
+    margin-bottom: 24px;
+}
+
+.stat-card {
+    animation: fadeIn 0.5s ease forwards;
+    opacity: 0;
+    position: relative;
+    overflow: hidden;
+}
+
+.stat-card::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    right: 0;
+    width: 100px;
+    height: 100px;
+    border-radius: 50%;
+    opacity: 0.04;
+    transform: translate(30%, -30%);
+}
+
+.stat-pending::after {
+    background: var(--status-pending);
+}
+
+.stat-approved::after {
+    background: var(--status-approved);
+}
+
+.stat-teal::after {
+    background: var(--accent-teal);
+}
+
+.stat-gold::after {
+    background: var(--accent-gold);
+}
+
+.stat-coral::after {
+    background: var(--status-rejected, #ef4444);
+}
+
+.stat-card-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 12px;
+}
+
+.stat-icon {
+    width: 40px;
+    height: 40px;
+    border-radius: var(--radius-md);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.stat-icon-pending {
+    background: var(--status-pending-bg);
+    color: var(--status-pending);
+}
+
+.stat-icon-approved {
+    background: var(--status-approved-bg);
+    color: var(--status-approved);
+}
+
+.stat-icon-teal {
+    background: var(--accent-teal-subtle);
+    color: var(--accent-teal);
+}
+
+.stat-icon-gold {
+    background: var(--accent-gold-subtle);
+    color: var(--accent-gold);
+}
+
+.stat-icon-coral {
+    background: rgba(239, 68, 68, 0.12);
+    color: var(--status-rejected, #ef4444);
+}
+
+.stat-trend-icon {
+    color: var(--text-muted);
+}
+
+.stat-value {
+    font-size: 2rem;
+    font-weight: 700;
+    letter-spacing: -0.03em;
+    line-height: 1;
+    margin-bottom: 4px;
+}
+
+.stat-label {
+    font-size: 0.85rem;
+    color: var(--text-secondary);
+    margin-bottom: 8px;
+}
+
+.stat-trend {
+    font-size: 0.72rem;
+    color: var(--text-muted);
+}
+
+/* ==================== DASHBOARD GRID ==================== */
+
+.dashboard-grid {
+    display: grid;
+    grid-template-columns: 1fr 340px;
+    gap: 20px;
+}
+
+.recent-docs-card {
+    overflow: hidden;
+}
+
+.table-wrapper {
+    overflow-x: auto;
+    margin: 0 -24px;
+    padding: 0 24px;
+}
+
+.doc-link {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    color: var(--text-primary);
+}
+
+.doc-link:hover .doc-name {
+    color: var(--accent-gold);
+}
+
+.doc-name {
+    font-weight: 500;
+    font-size: 0.88rem;
+    transition: color var(--transition-fast);
+}
+
+.doc-id {
+    font-size: 0.72rem;
+    color: var(--text-muted);
+}
+
+.text-muted {
+    color: var(--text-secondary);
+    font-size: 0.85rem;
+}
+
+/* ==================== ACTIVITY FEED ==================== */
+
+.activity-list {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.activity-item {
+    display: flex;
+    gap: 12px;
+    padding: 10px 0;
+    border-bottom: 1px solid var(--border-color);
+    animation: fadeIn 0.4s ease forwards;
+    opacity: 0;
+}
+
+.activity-item:last-child {
+    border-bottom: none;
+}
+
+.activity-dot {
+    width: 8px;
+    height: 8px;
+    min-width: 8px;
+    border-radius: 50%;
+    margin-top: 6px;
+}
+
+.dot-approved {
+    background: var(--status-approved);
+}
+
+.dot-uploaded {
+    background: var(--accent-teal);
+}
+
+.dot-rejected {
+    background: var(--status-rejected);
+}
+
+.dot-delegated {
+    background: var(--accent-gold);
+}
+
+.activity-content p {
+    font-size: 0.84rem;
+    color: var(--text-secondary);
+    line-height: 1.4;
+}
+
+.activity-content strong {
+    color: var(--text-primary);
+    font-weight: 500;
+}
+
+.activity-content .mono {
+    font-size: 0.78rem;
+    color: var(--accent-teal);
+}
+
+.activity-time {
+    font-size: 0.72rem;
+    color: var(--text-muted);
+}
+
+/* ==================== RESPONSIVE ==================== */
+
+@media (max-width: 1279px) {
+    .stats-grid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+
+    .dashboard-grid {
+        grid-template-columns: 1fr;
+    }
+}
+
+@media (max-width: 640px) {
+    .stats-grid {
+        grid-template-columns: 1fr;
+    }
+}

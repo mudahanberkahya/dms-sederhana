@@ -1,0 +1,203 @@
+.documents-page {}
+
+/* ==================== TOOLBAR ==================== */
+
+.docs-toolbar {
+    margin-bottom: 16px;
+    padding: 16px 20px;
+}
+
+.filter-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    flex-wrap: wrap;
+}
+
+.filter-chips {
+    display: flex;
+    gap: 6px;
+    flex-wrap: wrap;
+}
+
+.filter-chip {
+    padding: 6px 16px;
+    border-radius: var(--radius-pill);
+    background: var(--bg-elevated);
+    border: 1px solid var(--border-color);
+    color: var(--text-secondary);
+    font-size: 0.82rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all var(--transition-fast);
+}
+
+.filter-chip:hover {
+    border-color: var(--accent-gold);
+    color: var(--text-primary);
+}
+
+.filter-chip.active {
+    background: var(--accent-gold-subtle);
+    border-color: var(--accent-gold);
+    color: var(--accent-gold);
+}
+
+.toolbar-right {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.filter-select {
+    padding: 7px 12px;
+    font-size: 0.82rem;
+    min-width: 140px;
+}
+
+.view-toggles {
+    display: flex;
+    background: var(--bg-elevated);
+    border-radius: var(--radius-md);
+    padding: 2px;
+}
+
+.view-toggles .btn-icon {
+    border-radius: var(--radius-sm);
+}
+
+.view-toggles .btn-icon.active {
+    background: var(--accent-gold-subtle);
+    color: var(--accent-gold);
+}
+
+/* ==================== TABLE CARD ==================== */
+
+.docs-table-card {
+    padding: 0;
+    overflow: hidden;
+}
+
+.docs-table-card .table-wrapper {
+    margin: 0;
+    padding: 0;
+}
+
+/* ==================== GRID VIEW ==================== */
+
+.docs-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 16px;
+    margin-bottom: 20px;
+}
+
+.doc-card {
+    color: inherit;
+    text-decoration: none;
+    cursor: pointer;
+    padding: 0;
+    overflow: hidden;
+}
+
+.doc-card:hover {
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-lg);
+}
+
+.doc-card-preview {
+    height: 100px;
+    background: linear-gradient(135deg, var(--bg-elevated), var(--bg-hover));
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--text-muted);
+}
+
+.doc-card-body {
+    padding: 16px;
+}
+
+.doc-card-title {
+    font-size: 0.9rem;
+    font-weight: 600;
+    margin: 8px 0 4px;
+    color: var(--text-primary);
+    line-height: 1.3;
+}
+
+.doc-card-id {
+    font-size: 0.72rem;
+    color: var(--text-muted);
+}
+
+.doc-card-footer {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-top: 12px;
+}
+
+.doc-card-date {
+    font-size: 0.75rem;
+    color: var(--text-muted);
+}
+
+.badge-sm {
+    padding: 2px 8px;
+    font-size: 0.68rem;
+}
+
+/* ==================== PAGINATION ==================== */
+
+.pagination {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-top: 20px;
+    padding: 12px 0;
+}
+
+.pagination-info {
+    font-size: 0.82rem;
+    color: var(--text-muted);
+}
+
+.pagination-controls {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.pagination-page {
+    width: 32px;
+    height: 32px;
+    border-radius: var(--radius-md);
+    border: none;
+    background: var(--bg-elevated);
+    color: var(--text-secondary);
+    font-size: 0.82rem;
+    font-weight: 500;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all var(--transition-fast);
+}
+
+.pagination-page.active {
+    background: var(--accent-gold);
+    color: var(--text-inverse);
+}
+
+@media (max-width: 768px) {
+    .filter-row {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+
+    .docs-grid {
+        grid-template-columns: 1fr;
+    }
+}

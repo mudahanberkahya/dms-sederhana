@@ -1,0 +1,116 @@
+version: "2"
+type: frontend
+tech_stack:
+  - React 19
+  - Vite 7
+  - React Router v7
+  - Lucide React
+  - Vanilla CSS
+routes:
+  - path: /login
+    file: packages/web/src/pages/Login.jsx
+    auth_required: false
+    description: User login page
+  - path: /
+    file: packages/web/src/pages/Dashboard.jsx
+    auth_required: true
+    description: Dashboard with statistics and recent documents
+  - path: /documents
+    file: packages/web/src/pages/Documents.jsx
+    auth_required: true
+    description: List of documents with filters
+  - path: /documents/upload
+    file: packages/web/src/pages/Upload.jsx
+    auth_required: true
+    description: 3-step wizard to upload new documents
+  - path: /documents/:id
+    file: packages/web/src/pages/DocumentDetail.jsx
+    auth_required: true
+    description: Document detail page with PDF preview and approval tracking
+  - path: /approvals
+    file: packages/web/src/pages/Approvals.jsx
+    auth_required: true
+    description: View pending, completed, and delegated approvals
+  - path: /admin/users
+    file: packages/web/src/pages/Users.jsx
+    auth_required: true
+    description: Admin panel to manage users
+  - path: /admin/signatures
+    file: packages/web/src/pages/Signatures.jsx
+    auth_required: true
+    description: Admin panel to manage user signatures
+  - path: /admin/workflows
+    file: packages/web/src/pages/Workflows.jsx
+    auth_required: true
+    description: Admin panel to configure approval workflows
+  - path: /admin/keywords
+    file: packages/web/src/pages/Keywords.jsx
+    auth_required: true
+    description: Admin panel to set keyword mappings for signature stamping
+  - path: /admin/delegation
+    file: packages/web/src/pages/Delegation.jsx
+    auth_required: true
+    description: Admin panel for absence delegation
+  - path: /settings
+    file: packages/web/src/pages/Settings.jsx
+    auth_required: true
+    description: User settings and profile page
+features:
+  - name: User Login
+    description: Login with email and password credentials
+    files:
+      - packages/web/src/pages/Login.jsx
+      - packages/web/src/lib/auth.js
+    entry_route: /login
+    user_interactions:
+      - Fill email input field
+      - Fill password input field
+      - Click Sign In button to submit
+      - See error message on invalid credentials
+    api_calls:
+      - method: POST
+        endpoint: /api/auth/sign-in
+    auth_required: false
+  - name: Document Upload
+    description: Upload a new PDF document, categorize it, and submit for approval
+    files:
+      - packages/web/src/pages/Upload.jsx
+    entry_route: /documents/upload
+    user_interactions:
+      - Select a PDF file
+      - Choose a category (e.g., PO, CA)
+      - Choose a branch
+      - Add optional notes
+      - Click Submit for Approval
+    api_calls:
+      - method: POST
+        endpoint: /api/documents
+    auth_required: true
+  - name: View Documents
+    description: Browse and filter uploaded documents
+    files:
+      - packages/web/src/pages/Documents.jsx
+    entry_route: /documents
+    user_interactions:
+      - Click category filter chips
+      - Select status from dropdown
+      - Toggle table/grid view
+    api_calls:
+      - method: GET
+        endpoint: /api/documents
+    auth_required: true
+  - name: Document Approval
+    description: Approve or reject a document step
+    files:
+      - packages/web/src/pages/DocumentDetail.jsx
+    entry_route: /documents/:id
+    user_interactions:
+      - Navigate to document detail
+      - Review PDF
+      - Click Approve & Sign or Reject
+      - Provide optional comment
+    api_calls:
+      - method: POST
+        endpoint: /api/approvals/:id/action
+    auth_required: true
+known_limitations: []

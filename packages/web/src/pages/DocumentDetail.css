@@ -1,0 +1,240 @@
+.detail-page {}
+
+.detail-header {
+    margin-bottom: 20px;
+}
+
+.detail-grid {
+    display: grid;
+    grid-template-columns: 1fr 380px;
+    gap: 20px;
+    align-items: start;
+}
+
+/* ==================== PDF VIEWER ==================== */
+
+.pdf-viewer-card {
+    padding: 0;
+    overflow: hidden;
+    position: sticky;
+    top: calc(var(--navbar-height) + 28px);
+}
+
+.pdf-viewer-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 14px 20px;
+    border-bottom: 1px solid var(--border-color);
+}
+
+.pdf-info {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    color: var(--text-secondary);
+    font-size: 0.85rem;
+}
+
+.pdf-viewer-body {
+    min-height: 600px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.pdf-placeholder {
+    text-align: center;
+    color: var(--text-muted);
+}
+
+.pdf-placeholder p {
+    margin-top: 12px;
+    font-weight: 500;
+    font-size: 0.95rem;
+}
+
+.pdf-placeholder span {
+    font-size: 0.78rem;
+}
+
+/* ==================== SIDEBAR ==================== */
+
+.detail-sidebar {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+/* Info Card */
+.detail-info-card {
+    padding: 20px;
+}
+
+.info-grid {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    margin-top: 12px;
+}
+
+.info-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 12px;
+}
+
+.info-label {
+    font-size: 0.8rem;
+    color: var(--text-muted);
+    min-width: 70px;
+}
+
+.info-value {
+    font-size: 0.85rem;
+    color: var(--text-primary);
+    text-align: right;
+}
+
+/* ==================== APPROVAL STEPPER ==================== */
+
+.approval-chain-card .card-title {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.approval-stepper {
+    margin-top: 16px;
+}
+
+.stepper-item {
+    display: flex;
+    gap: 14px;
+    position: relative;
+}
+
+.stepper-line-area {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    min-width: 20px;
+}
+
+.stepper-line {
+    width: 2px;
+    flex: 1;
+    min-height: 20px;
+    background: var(--border-color);
+    margin: 4px 0;
+}
+
+.step-completed .stepper-line {
+    background: var(--status-approved);
+    opacity: 0.3;
+}
+
+.step-current .stepper-line {
+    background: var(--accent-gold);
+    opacity: 0.3;
+}
+
+.step-icon.completed {
+    color: var(--status-approved);
+}
+
+.step-icon.current {
+    color: var(--accent-gold);
+    animation: pulse 2s infinite;
+}
+
+.step-icon.rejected {
+    color: var(--status-rejected);
+}
+
+.step-icon.pending {
+    color: var(--text-muted);
+}
+
+.stepper-content {
+    padding-bottom: 20px;
+    flex: 1;
+}
+
+.stepper-role {
+    font-size: 0.82rem;
+    font-weight: 600;
+    color: var(--text-primary);
+    margin-bottom: 2px;
+}
+
+.stepper-user {
+    font-size: 0.82rem;
+    color: var(--text-secondary);
+}
+
+.stepper-delegate {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    margin-top: 4px;
+    padding: 3px 8px;
+    border-radius: var(--radius-sm);
+    background: var(--accent-gold-subtle);
+    color: var(--accent-gold);
+    font-size: 0.72rem;
+    font-weight: 500;
+    width: fit-content;
+}
+
+.stepper-date {
+    font-size: 0.72rem;
+    color: var(--text-muted);
+    margin-top: 4px;
+}
+
+.stepper-note {
+    font-size: 0.75rem;
+    color: var(--text-muted);
+    font-style: italic;
+}
+
+.stepper-badge {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    margin-top: 6px;
+    padding: 3px 10px;
+    border-radius: var(--radius-pill);
+    background: var(--status-pending-bg);
+    color: var(--status-pending);
+    font-size: 0.72rem;
+    font-weight: 600;
+    width: fit-content;
+}
+
+/* ==================== ACTIONS ==================== */
+
+.detail-actions {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.detail-action-btn {
+    width: 100%;
+    justify-content: center;
+}
+
+/* ==================== RESPONSIVE ==================== */
+
+@media (max-width: 1023px) {
+    .detail-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .pdf-viewer-card {
+        position: static;
+    }
+}

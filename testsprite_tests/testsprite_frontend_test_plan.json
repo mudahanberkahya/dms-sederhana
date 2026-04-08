@@ -1,0 +1,2434 @@
+[
+  {
+    "id": "TC001",
+    "title": "Dashboard loads and shows summary statistics and recent documents",
+    "description": "Verifies an authenticated user can open the dashboard and see key summary cards and a recent documents section.",
+    "category": "Dashboard",
+    "priority": "High",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /login"
+      },
+      {
+        "type": "action",
+        "description": "Type \"{{LOGIN_USER}}\" into the email/username field"
+      },
+      {
+        "type": "action",
+        "description": "Type \"{{LOGIN_PASSWORD}}\" into the password field"
+      },
+      {
+        "type": "action",
+        "description": "Click on the \"Sign in\" button"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify URL contains \"/\""
+      },
+      {
+        "type": "assertion",
+        "description": "Verify text \"Statistics\" is visible"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify text \"Recent documents\" is visible"
+      }
+    ]
+  },
+  {
+    "id": "TC002",
+    "title": "Dashboard quick link to Documents list works",
+    "description": "Verifies the dashboard provides a working navigation path to the Documents list page.",
+    "category": "Dashboard",
+    "priority": "Medium",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /login"
+      },
+      {
+        "type": "action",
+        "description": "Type \"{{LOGIN_USER}}\" into the email/username field"
+      },
+      {
+        "type": "action",
+        "description": "Type \"{{LOGIN_PASSWORD}}\" into the password field"
+      },
+      {
+        "type": "action",
+        "description": "Click on the \"Sign in\" button"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify URL contains \"/\""
+      },
+      {
+        "type": "action",
+        "description": "Click on the \"Documents\" link"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify URL contains \"/documents\""
+      },
+      {
+        "type": "assertion",
+        "description": "Verify text \"Documents\" is visible"
+      }
+    ]
+  },
+  {
+    "id": "TC003",
+    "title": "Dashboard quick link to Approvals works",
+    "description": "Verifies the dashboard provides a working navigation path to the Approvals page.",
+    "category": "Dashboard",
+    "priority": "Medium",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /login"
+      },
+      {
+        "type": "action",
+        "description": "Type \"{{LOGIN_USER}}\" into the email/username field"
+      },
+      {
+        "type": "action",
+        "description": "Type \"{{LOGIN_PASSWORD}}\" into the password field"
+      },
+      {
+        "type": "action",
+        "description": "Click on the \"Sign in\" button"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify URL contains \"/\""
+      },
+      {
+        "type": "action",
+        "description": "Click on the \"Approvals\" link"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify URL contains \"/approvals\""
+      },
+      {
+        "type": "assertion",
+        "description": "Verify text \"Approvals\" is visible"
+      }
+    ]
+  },
+  {
+    "id": "TC004",
+    "title": "Cancel out of the upload wizard and return to Documents list without submitting",
+    "description": "Verifies the user can exit the wizard using a cancel/back control and is returned to /documents.",
+    "category": "Document Upload (3-step wizard)",
+    "priority": "Medium",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /login"
+      },
+      {
+        "type": "action",
+        "description": "Type \"{{LOGIN_USER}}\" into the email/username field"
+      },
+      {
+        "type": "action",
+        "description": "Type \"{{LOGIN_PASSWORD}}\" into the password field"
+      },
+      {
+        "type": "action",
+        "description": "Click the \"Log in\" button"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify URL contains \"/\""
+      },
+      {
+        "type": "action",
+        "description": "Click on \"Documents\" in the main navigation"
+      },
+      {
+        "type": "action",
+        "description": "Click the \"Upload\" button or link"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify URL contains \"/documents/upload\""
+      },
+      {
+        "type": "action",
+        "description": "Click the \"Cancel\" or \"Back to Documents\" button/link"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify URL contains \"/documents\""
+      },
+      {
+        "type": "assertion",
+        "description": "Verify text \"Documents\" is visible"
+      }
+    ]
+  },
+  {
+    "id": "TC005",
+    "title": "Ensure Submit is blocked when no file is selected",
+    "description": "Verifies the wizard does not allow submission without selecting a file and shows a visible error state/message.",
+    "category": "Document Upload (3-step wizard)",
+    "priority": "High",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /login"
+      },
+      {
+        "type": "action",
+        "description": "Type \"{{LOGIN_USER}}\" into the email/username field"
+      },
+      {
+        "type": "action",
+        "description": "Type \"{{LOGIN_PASSWORD}}\" into the password field"
+      },
+      {
+        "type": "action",
+        "description": "Click the \"Log in\" button"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify URL contains \"/\""
+      },
+      {
+        "type": "action",
+        "description": "Click on \"Documents\" in the main navigation"
+      },
+      {
+        "type": "action",
+        "description": "Click the \"Upload\" button or link"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify URL contains \"/documents/upload\""
+      },
+      {
+        "type": "action",
+        "description": "Select \"PO\" from the Category dropdown"
+      },
+      {
+        "type": "action",
+        "description": "Select any available option from the Branch dropdown"
+      },
+      {
+        "type": "action",
+        "description": "Click the \"Submit for Approval\" button"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify text \"file\" is visible"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify text \"required\" is visible"
+      }
+    ]
+  },
+  {
+    "id": "TC006",
+    "title": "Filter documents by category chip and status, then toggle views",
+    "description": "Verifies that a user can filter the documents list by category and status and switch between table and grid views while keeping the filtered results visible.",
+    "category": "View Documents (list & filters)",
+    "priority": "High",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /login"
+      },
+      {
+        "type": "action",
+        "description": "Type \"{{LOGIN_USER}}\" into the email/username field"
+      },
+      {
+        "type": "action",
+        "description": "Type \"{{LOGIN_PASSWORD}}\" into the password field"
+      },
+      {
+        "type": "action",
+        "description": "Click the \"Sign in\" button"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify URL contains \"/\""
+      },
+      {
+        "type": "action",
+        "description": "Click on \"Documents\" in the main navigation"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify URL contains \"/documents\""
+      },
+      {
+        "type": "assertion",
+        "description": "Verify element \"Documents\" is visible"
+      }
+    ]
+  },
+  {
+    "id": "TC007",
+    "title": "Apply category chip filter (e.g., PO) and verify list updates",
+    "description": "Verifies that selecting a category chip filters the visible documents list.",
+    "category": "View Documents (list & filters)",
+    "priority": "High",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /login"
+      },
+      {
+        "type": "action",
+        "description": "Type \"{{LOGIN_USER}}\" into the email/username field"
+      },
+      {
+        "type": "action",
+        "description": "Type \"{{LOGIN_PASSWORD}}\" into the password field"
+      },
+      {
+        "type": "action",
+        "description": "Click the \"Sign in\" button"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify URL contains \"/\""
+      },
+      {
+        "type": "action",
+        "description": "Click on \"Documents\" in the main navigation"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify URL contains \"/documents\""
+      },
+      {
+        "type": "action",
+        "description": "Click the \"PO\" category filter chip"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify element \"PO\" is visible"
+      }
+    ]
+  },
+  {
+    "id": "TC008",
+    "title": "Apply status dropdown filter (e.g., PENDING) and verify list updates",
+    "description": "Verifies that selecting a status from the status dropdown filters the visible documents list.",
+    "category": "View Documents (list & filters)",
+    "priority": "High",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /login"
+      },
+      {
+        "type": "action",
+        "description": "Type \"{{LOGIN_USER}}\" into the email/username field"
+      },
+      {
+        "type": "action",
+        "description": "Type \"{{LOGIN_PASSWORD}}\" into the password field"
+      },
+      {
+        "type": "action",
+        "description": "Click the \"Sign in\" button"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify URL contains \"/\""
+      },
+      {
+        "type": "action",
+        "description": "Click on \"Documents\" in the main navigation"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify URL contains \"/documents\""
+      },
+      {
+        "type": "action",
+        "description": "Select \"PENDING\" from the status dropdown"
+      }
+    ]
+  },
+  {
+    "id": "TC009",
+    "title": "Combine category and status filters and verify filtered results persist after toggling view",
+    "description": "Verifies that using both category and status filters together narrows results and that switching between table and grid views does not reset filters.",
+    "category": "View Documents (list & filters)",
+    "priority": "High",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /login"
+      },
+      {
+        "type": "action",
+        "description": "Type \"{{LOGIN_USER}}\" into the email/username field"
+      },
+      {
+        "type": "action",
+        "description": "Type \"{{LOGIN_PASSWORD}}\" into the password field"
+      },
+      {
+        "type": "action",
+        "description": "Click the \"Sign in\" button"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify URL contains \"/\""
+      },
+      {
+        "type": "action",
+        "description": "Click on \"Documents\" in the main navigation"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify URL contains \"/documents\""
+      },
+      {
+        "type": "action",
+        "description": "Click the \"PO\" category filter chip"
+      },
+      {
+        "type": "action",
+        "description": "Select \"PENDING\" from the status dropdown"
+      }
+    ]
+  },
+  {
+    "id": "TC010",
+    "title": "Toggle to grid view and confirm grid layout is displayed",
+    "description": "Verifies that the user can switch from table view to grid view and the grid presentation is visible.",
+    "category": "View Documents (list & filters)",
+    "priority": "Medium",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /login"
+      },
+      {
+        "type": "action",
+        "description": "Type \"{{LOGIN_USER}}\" into the email/username field"
+      },
+      {
+        "type": "action",
+        "description": "Type \"{{LOGIN_PASSWORD}}\" into the password field"
+      },
+      {
+        "type": "action",
+        "description": "Click the \"Sign in\" button"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify URL contains \"/\""
+      },
+      {
+        "type": "action",
+        "description": "Click on \"Documents\" in the main navigation"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify URL contains \"/documents\""
+      },
+      {
+        "type": "action",
+        "description": "Click the \"Grid\" view toggle"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify element \"Grid\" is visible"
+      }
+    ]
+  },
+  {
+    "id": "TC011",
+    "title": "Toggle to table view and confirm table layout is displayed",
+    "description": "Verifies that the user can switch to table view and the table presentation is visible.",
+    "category": "View Documents (list & filters)",
+    "priority": "Medium",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /login"
+      },
+      {
+        "type": "action",
+        "description": "Type \"{{LOGIN_USER}}\" into the email/username field"
+      },
+      {
+        "type": "action",
+        "description": "Type \"{{LOGIN_PASSWORD}}\" into the password field"
+      },
+      {
+        "type": "action",
+        "description": "Click the \"Sign in\" button"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify URL contains \"/\""
+      },
+      {
+        "type": "action",
+        "description": "Click on \"Documents\" in the main navigation"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify URL contains \"/documents\""
+      },
+      {
+        "type": "action",
+        "description": "Click the \"Table\" view toggle"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify element \"Table\" is visible"
+      }
+    ]
+  },
+  {
+    "id": "TC012",
+    "title": "Approve & Sign a document and see approval stepper update",
+    "description": "Verifies that a user can approve a document with an optional comment and the approval chain updates to APPROVED.",
+    "category": "Document Detail & Approval",
+    "priority": "High",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /login"
+      },
+      {
+        "type": "action",
+        "description": "Type \"{{LOGIN_USER}}\" into the email/username field"
+      },
+      {
+        "type": "action",
+        "description": "Type \"{{LOGIN_PASSWORD}}\" into the password field"
+      },
+      {
+        "type": "action",
+        "description": "Click on \"Log in\""
+      },
+      {
+        "type": "assertion",
+        "description": "Verify URL contains \"/\""
+      },
+      {
+        "type": "action",
+        "description": "Click on \"Documents\" in the main navigation"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify URL contains \"/documents\""
+      },
+      {
+        "type": "action",
+        "description": "Click on a document name in the documents list"
+      }
+    ]
+  },
+  {
+    "id": "TC013",
+    "title": "Approve & Sign with optional comment and confirm success state is visible",
+    "description": "Verifies the approve confirmation flow including entering a comment and seeing an approved status in the UI.",
+    "category": "Document Detail & Approval",
+    "priority": "High",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /login"
+      },
+      {
+        "type": "action",
+        "description": "Type \"{{LOGIN_USER}}\" into the email/username field"
+      },
+      {
+        "type": "action",
+        "description": "Type \"{{LOGIN_PASSWORD}}\" into the password field"
+      },
+      {
+        "type": "action",
+        "description": "Click on \"Log in\""
+      },
+      {
+        "type": "action",
+        "description": "Click on \"Documents\" in the main navigation"
+      },
+      {
+        "type": "action",
+        "description": "Click on a document name in the documents list"
+      },
+      {
+        "type": "action",
+        "description": "Click on \"Approve & Sign\""
+      },
+      {
+        "type": "action",
+        "description": "Type \"Approved by UI test\" into the comment field"
+      }
+    ]
+  },
+  {
+    "id": "TC014",
+    "title": "Approve & Sign confirm updates approval step to APPROVED (and unlocks next step or completes document)",
+    "description": "Verifies that confirming approval updates the approval stepper and overall state shows approved progression.",
+    "category": "Document Detail & Approval",
+    "priority": "High",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /login"
+      },
+      {
+        "type": "action",
+        "description": "Type \"{{LOGIN_USER}}\" into the email/username field"
+      },
+      {
+        "type": "action",
+        "description": "Type \"{{LOGIN_PASSWORD}}\" into the password field"
+      },
+      {
+        "type": "action",
+        "description": "Click on \"Log in\""
+      },
+      {
+        "type": "action",
+        "description": "Click on \"Documents\" in the main navigation"
+      },
+      {
+        "type": "action",
+        "description": "Click on a document name in the documents list"
+      },
+      {
+        "type": "action",
+        "description": "Click on \"Approve & Sign\""
+      },
+      {
+        "type": "action",
+        "description": "Click on \"Confirm\""
+      },
+      {
+        "type": "assertion",
+        "description": "Verify text \"APPROVED\" is visible"
+      }
+    ]
+  },
+  {
+    "id": "TC015",
+    "title": "Reject a document with optional comment and confirm status becomes REJECTED",
+    "description": "Verifies the reject flow and that the document status visibly updates to REJECTED and approvals stop.",
+    "category": "Document Detail & Approval",
+    "priority": "High",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /login"
+      },
+      {
+        "type": "action",
+        "description": "Type \"{{LOGIN_USER}}\" into the email/username field"
+      },
+      {
+        "type": "action",
+        "description": "Type \"{{LOGIN_PASSWORD}}\" into the password field"
+      },
+      {
+        "type": "action",
+        "description": "Click on \"Log in\""
+      },
+      {
+        "type": "action",
+        "description": "Click on \"Documents\" in the main navigation"
+      },
+      {
+        "type": "action",
+        "description": "Click on a document name in the documents list"
+      },
+      {
+        "type": "action",
+        "description": "Click on \"Reject\""
+      },
+      {
+        "type": "action",
+        "description": "Type \"Rejecting for UI test\" into the comment field"
+      }
+    ]
+  },
+  {
+    "id": "TC016",
+    "title": "Reject confirm shows REJECTED state in approval chain and/or document header",
+    "description": "Verifies that after confirming reject, the UI shows REJECTED and the approval chain indicates it is stopped.",
+    "category": "Document Detail & Approval",
+    "priority": "High",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /login"
+      },
+      {
+        "type": "action",
+        "description": "Type \"{{LOGIN_USER}}\" into the email/username field"
+      },
+      {
+        "type": "action",
+        "description": "Type \"{{LOGIN_PASSWORD}}\" into the password field"
+      },
+      {
+        "type": "action",
+        "description": "Click on \"Log in\""
+      },
+      {
+        "type": "action",
+        "description": "Click on \"Documents\" in the main navigation"
+      },
+      {
+        "type": "action",
+        "description": "Click on a document name in the documents list"
+      },
+      {
+        "type": "action",
+        "description": "Click on \"Reject\""
+      },
+      {
+        "type": "action",
+        "description": "Click on \"Confirm\""
+      },
+      {
+        "type": "assertion",
+        "description": "Verify text \"REJECTED\" is visible"
+      }
+    ]
+  },
+  {
+    "id": "TC017",
+    "title": "Approve & Sign when signature stamp is unavailable shows 'Approved without stamp' notification",
+    "description": "Verifies that approving without signature image or keyword mapping succeeds and shows the 'Approved without stamp' message.",
+    "category": "Document Detail & Approval",
+    "priority": "Medium",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /login"
+      },
+      {
+        "type": "action",
+        "description": "Type \"{{LOGIN_USER}}\" into the email/username field"
+      },
+      {
+        "type": "action",
+        "description": "Type \"{{LOGIN_PASSWORD}}\" into the password field"
+      },
+      {
+        "type": "action",
+        "description": "Click on \"Log in\""
+      },
+      {
+        "type": "action",
+        "description": "Click on \"Documents\" in the main navigation"
+      },
+      {
+        "type": "action",
+        "description": "Click on a document name in the documents list"
+      },
+      {
+        "type": "action",
+        "description": "Click on \"Approve & Sign\""
+      },
+      {
+        "type": "action",
+        "description": "Click on \"Confirm\""
+      },
+      {
+        "type": "assertion",
+        "description": "Verify text \"Approved without stamp\" is visible"
+      }
+    ]
+  },
+  {
+    "id": "TC018",
+    "title": "Pending approval can be approved and moves to Completed",
+    "description": "Verifies an approver can open a pending approval, approve it from the document detail page, and then see it removed from Pending and present in Completed.",
+    "category": "My Approvals (Pending / Completed / Delegated)",
+    "priority": "High",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /login"
+      },
+      {
+        "type": "action",
+        "description": "Type \"{{LOGIN_USER}}\" into the username/email field"
+      },
+      {
+        "type": "action",
+        "description": "Type \"{{LOGIN_PASSWORD}}\" into the password field"
+      },
+      {
+        "type": "action",
+        "description": "Click the \"Log in\" button"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify URL contains \"/\""
+      },
+      {
+        "type": "action",
+        "description": "Click \"Approvals\" in the main navigation"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify URL contains \"/approvals\""
+      },
+      {
+        "type": "assertion",
+        "description": "Verify text \"Pending\" is visible"
+      }
+    ]
+  },
+  {
+    "id": "TC019",
+    "title": "Open a pending approval item to reach its document detail page",
+    "description": "Verifies selecting a pending approval item opens its corresponding document detail page.",
+    "category": "My Approvals (Pending / Completed / Delegated)",
+    "priority": "High",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /login"
+      },
+      {
+        "type": "action",
+        "description": "Type \"{{LOGIN_USER}}\" into the username/email field"
+      },
+      {
+        "type": "action",
+        "description": "Type \"{{LOGIN_PASSWORD}}\" into the password field"
+      },
+      {
+        "type": "action",
+        "description": "Click the \"Log in\" button"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify URL contains \"/\""
+      },
+      {
+        "type": "action",
+        "description": "Click \"Approvals\" in the main navigation"
+      },
+      {
+        "type": "action",
+        "description": "Click the first approval item in the \"Pending\" list"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify URL contains \"/documents/\""
+      }
+    ]
+  },
+  {
+    "id": "TC020",
+    "title": "Reject a pending approval and verify it appears in Completed",
+    "description": "Verifies an approver can reject a pending approval and then see it no longer in Pending and listed in Completed.",
+    "category": "My Approvals (Pending / Completed / Delegated)",
+    "priority": "High",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /login"
+      },
+      {
+        "type": "action",
+        "description": "Type \"{{LOGIN_USER}}\" into the username/email field"
+      },
+      {
+        "type": "action",
+        "description": "Type \"{{LOGIN_PASSWORD}}\" into the password field"
+      },
+      {
+        "type": "action",
+        "description": "Click the \"Log in\" button"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify URL contains \"/\""
+      },
+      {
+        "type": "action",
+        "description": "Click \"Approvals\" in the main navigation"
+      },
+      {
+        "type": "action",
+        "description": "Click the first approval item in the \"Pending\" list"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify URL contains \"/documents/\""
+      }
+    ]
+  },
+  {
+    "id": "TC021",
+    "title": "Delegated tab is accessible and shows delegated approvals list",
+    "description": "Verifies the user can switch to the Delegated tab and view delegated approvals when available.",
+    "category": "My Approvals (Pending / Completed / Delegated)",
+    "priority": "Medium",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /login"
+      },
+      {
+        "type": "action",
+        "description": "Type \"{{LOGIN_USER}}\" into the username/email field"
+      },
+      {
+        "type": "action",
+        "description": "Type \"{{LOGIN_PASSWORD}}\" into the password field"
+      },
+      {
+        "type": "action",
+        "description": "Click the \"Log in\" button"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify URL contains \"/\""
+      },
+      {
+        "type": "action",
+        "description": "Click \"Approvals\" in the main navigation"
+      },
+      {
+        "type": "action",
+        "description": "Click the \"Delegated\" tab"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify text \"Delegated\" is visible"
+      }
+    ]
+  },
+  {
+    "id": "TC022",
+    "title": "Open a delegated approval item to reach its document detail page",
+    "description": "Verifies selecting a delegated approval item opens its corresponding document detail page.",
+    "category": "My Approvals (Pending / Completed / Delegated)",
+    "priority": "High",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /login"
+      },
+      {
+        "type": "action",
+        "description": "Type \"{{LOGIN_USER}}\" into the username/email field"
+      },
+      {
+        "type": "action",
+        "description": "Type \"{{LOGIN_PASSWORD}}\" into the password field"
+      },
+      {
+        "type": "action",
+        "description": "Click the \"Log in\" button"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify URL contains \"/\""
+      },
+      {
+        "type": "action",
+        "description": "Click \"Approvals\" in the main navigation"
+      },
+      {
+        "type": "action",
+        "description": "Click the \"Delegated\" tab"
+      },
+      {
+        "type": "action",
+        "description": "Click the first approval item in the delegated list"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify URL contains \"/documents/\""
+      }
+    ]
+  },
+  {
+    "id": "TC023",
+    "title": "Completed tab is accessible and shows completed approvals list",
+    "description": "Verifies the user can switch to the Completed tab and view completed approvals when available.",
+    "category": "My Approvals (Pending / Completed / Delegated)",
+    "priority": "Medium",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /login"
+      },
+      {
+        "type": "action",
+        "description": "Type \"{{LOGIN_USER}}\" into the username/email field"
+      },
+      {
+        "type": "action",
+        "description": "Type \"{{LOGIN_PASSWORD}}\" into the password field"
+      },
+      {
+        "type": "action",
+        "description": "Click the \"Log in\" button"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify URL contains \"/\""
+      },
+      {
+        "type": "action",
+        "description": "Click \"Approvals\" in the main navigation"
+      },
+      {
+        "type": "action",
+        "description": "Click the \"Completed\" tab"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify text \"Completed\" is visible"
+      }
+    ]
+  },
+  {
+    "id": "TC024",
+    "title": "Pending tab empty state is shown when there are no pending approvals",
+    "description": "Verifies the Pending tab shows the empty state message when no approvals are assigned.",
+    "category": "My Approvals (Pending / Completed / Delegated)",
+    "priority": "High",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /login"
+      },
+      {
+        "type": "action",
+        "description": "Type \"{{LOGIN_USER}}\" into the username/email field"
+      },
+      {
+        "type": "action",
+        "description": "Type \"{{LOGIN_PASSWORD}}\" into the password field"
+      },
+      {
+        "type": "action",
+        "description": "Click the \"Log in\" button"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify URL contains \"/\""
+      },
+      {
+        "type": "action",
+        "description": "Click \"Approvals\" in the main navigation"
+      },
+      {
+        "type": "action",
+        "description": "Click the \"Pending\" tab"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify text \"No pending approvals\" is visible"
+      }
+    ]
+  },
+  {
+    "id": "TC025",
+    "title": "Create a new user with required fields and verify it appears in the users list",
+    "description": "Verifies an admin can create a user by providing required fields and then see the user in the list.",
+    "category": "Admin — User Management",
+    "priority": "High",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /login"
+      },
+      {
+        "type": "action",
+        "description": "Type \"{{LOGIN_USER}}\" into the email or username field"
+      },
+      {
+        "type": "action",
+        "description": "Type \"{{LOGIN_PASSWORD}}\" into the password field"
+      },
+      {
+        "type": "action",
+        "description": "Click the \"Log in\" button"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify URL contains \"/\""
+      },
+      {
+        "type": "action",
+        "description": "Click on \"Users\" in the admin navigation"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify URL contains \"/admin/users\""
+      },
+      {
+        "type": "action",
+        "description": "Click the \"Create User\" button"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify text \"Create User\" is visible"
+      },
+      {
+        "type": "action",
+        "description": "Type \"Test User\" into the name field"
+      },
+      {
+        "type": "action",
+        "description": "Type \"test.user+e2e@example.com\" into the email field"
+      },
+      {
+        "type": "action",
+        "description": "Select \"Admin\" from the role dropdown"
+      },
+      {
+        "type": "action",
+        "description": "Select \"Main\" from the branch dropdown"
+      },
+      {
+        "type": "action",
+        "description": "Click the \"Save\" button"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify text \"test.user+e2e@example.com\" is visible"
+      }
+    ]
+  },
+  {
+    "id": "TC026",
+    "title": "Show validation errors when attempting to create a user with required fields blank",
+    "description": "Verifies required-field validation prevents saving a new user when mandatory inputs are empty.",
+    "category": "Admin — User Management",
+    "priority": "High",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /login"
+      },
+      {
+        "type": "action",
+        "description": "Type \"{{LOGIN_USER}}\" into the email or username field"
+      },
+      {
+        "type": "action",
+        "description": "Type \"{{LOGIN_PASSWORD}}\" into the password field"
+      },
+      {
+        "type": "action",
+        "description": "Click the \"Log in\" button"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify URL contains \"/\""
+      },
+      {
+        "type": "action",
+        "description": "Click on \"Users\" in the admin navigation"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify URL contains \"/admin/users\""
+      },
+      {
+        "type": "action",
+        "description": "Click the \"Create User\" button"
+      },
+      {
+        "type": "action",
+        "description": "Click the \"Save\" button"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify text \"Name is required\" is visible"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify text \"Email is required\" is visible"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify text \"Role is required\" is visible"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify text \"Branch is required\" is visible"
+      }
+    ]
+  },
+  {
+    "id": "TC027",
+    "title": "Cancel out of Create User without creating a user",
+    "description": "Verifies an admin can exit the create-user flow without saving and returns to the users list.",
+    "category": "Admin — User Management",
+    "priority": "Medium",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /login"
+      },
+      {
+        "type": "action",
+        "description": "Type \"{{LOGIN_USER}}\" into the email or username field"
+      },
+      {
+        "type": "action",
+        "description": "Type \"{{LOGIN_PASSWORD}}\" into the password field"
+      },
+      {
+        "type": "action",
+        "description": "Click the \"Log in\" button"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify URL contains \"/\""
+      },
+      {
+        "type": "action",
+        "description": "Click on \"Users\" in the admin navigation"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify URL contains \"/admin/users\""
+      },
+      {
+        "type": "action",
+        "description": "Click the \"Create User\" button"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify text \"Create User\" is visible"
+      },
+      {
+        "type": "action",
+        "description": "Click the \"Cancel\" button"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify URL contains \"/admin/users\""
+      },
+      {
+        "type": "assertion",
+        "description": "Verify text \"Create User\" is visible"
+      }
+    ]
+  },
+  {
+    "id": "TC028",
+    "title": "Prevent creating a user with an invalid email format",
+    "description": "Verifies email format validation blocks saving a user when email is not valid.",
+    "category": "Admin — User Management",
+    "priority": "High",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /login"
+      },
+      {
+        "type": "action",
+        "description": "Type \"{{LOGIN_USER}}\" into the email or username field"
+      },
+      {
+        "type": "action",
+        "description": "Type \"{{LOGIN_PASSWORD}}\" into the password field"
+      },
+      {
+        "type": "action",
+        "description": "Click the \"Log in\" button"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify URL contains \"/\""
+      },
+      {
+        "type": "action",
+        "description": "Click on \"Users\" in the admin navigation"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify URL contains \"/admin/users\""
+      },
+      {
+        "type": "action",
+        "description": "Click the \"Create User\" button"
+      },
+      {
+        "type": "action",
+        "description": "Type \"Invalid Email User\" into the name field"
+      },
+      {
+        "type": "action",
+        "description": "Type \"not-an-email\" into the email field"
+      },
+      {
+        "type": "action",
+        "description": "Select \"Admin\" from the role dropdown"
+      },
+      {
+        "type": "action",
+        "description": "Select \"Main\" from the branch dropdown"
+      },
+      {
+        "type": "action",
+        "description": "Click the \"Save\" button"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify text \"Invalid email\" is visible"
+      }
+    ]
+  },
+  {
+    "id": "TC029",
+    "title": "Verify users list page loads and core columns are visible",
+    "description": "Verifies the admin users list page renders and shows expected list structure for managing accounts.",
+    "category": "Admin — User Management",
+    "priority": "Low",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /login"
+      },
+      {
+        "type": "action",
+        "description": "Type \"{{LOGIN_USER}}\" into the email or username field"
+      },
+      {
+        "type": "action",
+        "description": "Type \"{{LOGIN_PASSWORD}}\" into the password field"
+      },
+      {
+        "type": "action",
+        "description": "Click the \"Log in\" button"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify URL contains \"/\""
+      },
+      {
+        "type": "action",
+        "description": "Click on \"Users\" in the admin navigation"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify URL contains \"/admin/users\""
+      },
+      {
+        "type": "assertion",
+        "description": "Verify text \"Users\" is visible"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify element \"Create User\" is visible"
+      }
+    ]
+  },
+  {
+    "id": "TC030",
+    "title": "Signatures page loads and shows users list with upload actions",
+    "description": "Verifies the signatures management page renders and exposes upload controls for admins.",
+    "category": "Admin — Signature Management",
+    "priority": "Medium",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /login"
+      },
+      {
+        "type": "action",
+        "description": "Type \"{{LOGIN_USER}}\" into the email/username field"
+      },
+      {
+        "type": "action",
+        "description": "Type \"{{LOGIN_PASSWORD}}\" into the password field"
+      },
+      {
+        "type": "action",
+        "description": "Click the \"Sign in\" button"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify URL contains \"/\""
+      },
+      {
+        "type": "action",
+        "description": "Click on the \"Admin\" navigation item"
+      },
+      {
+        "type": "action",
+        "description": "Click on the \"Signatures\" navigation item"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify element \"Upload Signature\" is visible"
+      }
+    ]
+  },
+  {
+    "id": "TC031",
+    "title": "Edit workflow steps and save successfully for a selected Category and Branch",
+    "description": "Verifies an admin can select a Category and Branch, modify workflow steps, save, and see a success confirmation with the updated steps visible.",
+    "category": "Admin — Workflow Configuration",
+    "priority": "High",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /login"
+      },
+      {
+        "type": "action",
+        "description": "Type \"{{LOGIN_USER}}\" into the email/username field"
+      },
+      {
+        "type": "action",
+        "description": "Type \"{{LOGIN_PASSWORD}}\" into the password field"
+      },
+      {
+        "type": "action",
+        "description": "Click the \"Log in\" button"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify URL contains \"/\""
+      },
+      {
+        "type": "action",
+        "description": "Click \"Workflows\" in the admin navigation/menu"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify URL contains \"/admin/workflows\""
+      },
+      {
+        "type": "assertion",
+        "description": "Verify text \"Workflows\" is visible"
+      }
+    ]
+  },
+  {
+    "id": "TC032",
+    "title": "Select Category and Branch then add a workflow step and save",
+    "description": "Verifies adding a new role/step to an existing workflow can be saved and is visible afterward for the same Category and Branch.",
+    "category": "Admin — Workflow Configuration",
+    "priority": "High",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /login"
+      },
+      {
+        "type": "action",
+        "description": "Type \"{{LOGIN_USER}}\" into the email/username field"
+      },
+      {
+        "type": "action",
+        "description": "Type \"{{LOGIN_PASSWORD}}\" into the password field"
+      },
+      {
+        "type": "action",
+        "description": "Click the \"Log in\" button"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify URL contains \"/\""
+      },
+      {
+        "type": "action",
+        "description": "Click \"Workflows\" in the admin navigation/menu"
+      },
+      {
+        "type": "action",
+        "description": "Select a Category from the Category dropdown"
+      },
+      {
+        "type": "action",
+        "description": "Select a Branch from the Branch dropdown"
+      }
+    ]
+  },
+  {
+    "id": "TC033",
+    "title": "Add a workflow step and confirm success message on Save",
+    "description": "Verifies the Save action shows a visible confirmation message after adding a step to the workflow.",
+    "category": "Admin — Workflow Configuration",
+    "priority": "High",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /login"
+      },
+      {
+        "type": "action",
+        "description": "Type \"{{LOGIN_USER}}\" into the email/username field"
+      },
+      {
+        "type": "action",
+        "description": "Type \"{{LOGIN_PASSWORD}}\" into the password field"
+      },
+      {
+        "type": "action",
+        "description": "Click the \"Log in\" button"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify URL contains \"/\""
+      },
+      {
+        "type": "action",
+        "description": "Click \"Workflows\" in the admin navigation/menu"
+      },
+      {
+        "type": "action",
+        "description": "Select a Category from the Category dropdown"
+      },
+      {
+        "type": "action",
+        "description": "Select a Branch from the Branch dropdown"
+      }
+    ]
+  },
+  {
+    "id": "TC034",
+    "title": "Remove a workflow step and save successfully (workflow remains non-empty)",
+    "description": "Verifies an admin can remove a role/step (leaving at least one step) and save successfully with updated steps shown.",
+    "category": "Admin — Workflow Configuration",
+    "priority": "Medium",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /login"
+      },
+      {
+        "type": "action",
+        "description": "Type \"{{LOGIN_USER}}\" into the email/username field"
+      },
+      {
+        "type": "action",
+        "description": "Type \"{{LOGIN_PASSWORD}}\" into the password field"
+      },
+      {
+        "type": "action",
+        "description": "Click the \"Log in\" button"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify URL contains \"/\""
+      },
+      {
+        "type": "action",
+        "description": "Click \"Workflows\" in the admin navigation/menu"
+      },
+      {
+        "type": "action",
+        "description": "Select a Category from the Category dropdown"
+      },
+      {
+        "type": "action",
+        "description": "Select a Branch from the Branch dropdown"
+      }
+    ]
+  },
+  {
+    "id": "TC035",
+    "title": "Attempt to save an empty workflow and see validation error",
+    "description": "Verifies saving with zero workflow steps is blocked and shows the validation error \"Workflow must contain at least one step\".",
+    "category": "Admin — Workflow Configuration",
+    "priority": "High",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /login"
+      },
+      {
+        "type": "action",
+        "description": "Type \"{{LOGIN_USER}}\" into the email/username field"
+      },
+      {
+        "type": "action",
+        "description": "Type \"{{LOGIN_PASSWORD}}\" into the password field"
+      },
+      {
+        "type": "action",
+        "description": "Click the \"Log in\" button"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify URL contains \"/\""
+      },
+      {
+        "type": "action",
+        "description": "Click \"Workflows\" in the admin navigation/menu"
+      },
+      {
+        "type": "action",
+        "description": "Select a Category from the Category dropdown"
+      },
+      {
+        "type": "action",
+        "description": "Select a Branch from the Branch dropdown"
+      }
+    ]
+  },
+  {
+    "id": "TC036",
+    "title": "Validation error persists until workflow has at least one step",
+    "description": "Verifies the empty-workflow validation error is shown on Save, and after adding one step, Save succeeds with a confirmation visible.",
+    "category": "Admin — Workflow Configuration",
+    "priority": "Medium",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /login"
+      },
+      {
+        "type": "action",
+        "description": "Type \"{{LOGIN_USER}}\" into the email/username field"
+      },
+      {
+        "type": "action",
+        "description": "Type \"{{LOGIN_PASSWORD}}\" into the password field"
+      },
+      {
+        "type": "action",
+        "description": "Click the \"Log in\" button"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify URL contains \"/\""
+      },
+      {
+        "type": "action",
+        "description": "Click \"Workflows\" in the admin navigation/menu"
+      },
+      {
+        "type": "action",
+        "description": "Select a Category from the Category dropdown"
+      },
+      {
+        "type": "action",
+        "description": "Select a Branch from the Branch dropdown"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify text \"Workflow must contain at least one step\" is visible"
+      }
+    ]
+  },
+  {
+    "id": "TC037",
+    "title": "Switch Category or Branch updates the displayed workflow steps",
+    "description": "Verifies changing the selected Category and/or Branch updates the workflow steps shown on the page.",
+    "category": "Admin — Workflow Configuration",
+    "priority": "Low",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /login"
+      },
+      {
+        "type": "action",
+        "description": "Type \"{{LOGIN_USER}}\" into the email/username field"
+      },
+      {
+        "type": "action",
+        "description": "Type \"{{LOGIN_PASSWORD}}\" into the password field"
+      },
+      {
+        "type": "action",
+        "description": "Click the \"Log in\" button"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify URL contains \"/\""
+      },
+      {
+        "type": "action",
+        "description": "Click \"Workflows\" in the admin navigation/menu"
+      },
+      {
+        "type": "action",
+        "description": "Select a Category from the Category dropdown"
+      },
+      {
+        "type": "action",
+        "description": "Select a Branch from the Branch dropdown"
+      }
+    ]
+  },
+  {
+    "id": "TC038",
+    "title": "Create a new keyword mapping and verify it appears in the list",
+    "description": "Verifies an admin can create a Category + Role keyword mapping with keyword and position hint and then see it listed.",
+    "category": "Admin — Keyword Mappings",
+    "priority": "High",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /login"
+      },
+      {
+        "type": "action",
+        "description": "Type \"{{LOGIN_USER}}\" into the username/email field"
+      },
+      {
+        "type": "action",
+        "description": "Type \"{{LOGIN_PASSWORD}}\" into the password field"
+      },
+      {
+        "type": "action",
+        "description": "Click the \"Sign in\" button"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify URL contains \"/\""
+      },
+      {
+        "type": "action",
+        "description": "Click the \"Keyword Mappings\" item in the admin navigation"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify URL contains \"/admin/keywords\""
+      },
+      {
+        "type": "action",
+        "description": "Click the \"Create Mapping\" button"
+      },
+      {
+        "type": "action",
+        "description": "Select \"General\" from the Category dropdown"
+      },
+      {
+        "type": "action",
+        "description": "Select \"Manager\" from the Role dropdown"
+      },
+      {
+        "type": "action",
+        "description": "Type \"SIGN_HERE\" into the Keyword field"
+      },
+      {
+        "type": "action",
+        "description": "Type \"Bottom-right\" into the Position Hint field"
+      },
+      {
+        "type": "action",
+        "description": "Click the \"Save\" button"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify text \"SIGN_HERE\" is visible"
+      }
+    ]
+  },
+  {
+    "id": "TC039",
+    "title": "Validation: keyword is required when creating a mapping",
+    "description": "Verifies the UI blocks saving a mapping when the keyword field is empty and shows the required validation message.",
+    "category": "Admin — Keyword Mappings",
+    "priority": "High",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /login"
+      },
+      {
+        "type": "action",
+        "description": "Type \"{{LOGIN_USER}}\" into the username/email field"
+      },
+      {
+        "type": "action",
+        "description": "Type \"{{LOGIN_PASSWORD}}\" into the password field"
+      },
+      {
+        "type": "action",
+        "description": "Click the \"Sign in\" button"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify URL contains \"/\""
+      },
+      {
+        "type": "action",
+        "description": "Click the \"Keyword Mappings\" item in the admin navigation"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify URL contains \"/admin/keywords\""
+      },
+      {
+        "type": "action",
+        "description": "Click the \"Create Mapping\" button"
+      },
+      {
+        "type": "action",
+        "description": "Select \"General\" from the Category dropdown"
+      },
+      {
+        "type": "action",
+        "description": "Select \"Manager\" from the Role dropdown"
+      },
+      {
+        "type": "action",
+        "description": "Type \"Top-left\" into the Position Hint field"
+      },
+      {
+        "type": "action",
+        "description": "Click the \"Save\" button"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify text \"Keyword is required\" is visible"
+      }
+    ]
+  },
+  {
+    "id": "TC040",
+    "title": "Cancel mapping creation leaves list unchanged (no new keyword shown)",
+    "description": "Verifies an admin can cancel out of the create mapping flow without saving a new mapping.",
+    "category": "Admin — Keyword Mappings",
+    "priority": "Medium",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /login"
+      },
+      {
+        "type": "action",
+        "description": "Type \"{{LOGIN_USER}}\" into the username/email field"
+      },
+      {
+        "type": "action",
+        "description": "Type \"{{LOGIN_PASSWORD}}\" into the password field"
+      },
+      {
+        "type": "action",
+        "description": "Click the \"Sign in\" button"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify URL contains \"/\""
+      },
+      {
+        "type": "action",
+        "description": "Click the \"Keyword Mappings\" item in the admin navigation"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify URL contains \"/admin/keywords\""
+      },
+      {
+        "type": "action",
+        "description": "Click the \"Create Mapping\" button"
+      },
+      {
+        "type": "action",
+        "description": "Type \"TEMP_KEYWORD_SHOULD_NOT_SAVE\" into the Keyword field"
+      },
+      {
+        "type": "action",
+        "description": "Click the \"Cancel\" button"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify text \"TEMP_KEYWORD_SHOULD_NOT_SAVE\" is not visible"
+      }
+    ]
+  },
+  {
+    "id": "TC041",
+    "title": "Create mapping with trimmed keyword (leading/trailing spaces)",
+    "description": "Verifies the system accepts a keyword with surrounding spaces and displays it cleanly in the list.",
+    "category": "Admin — Keyword Mappings",
+    "priority": "Medium",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /login"
+      },
+      {
+        "type": "action",
+        "description": "Type \"{{LOGIN_USER}}\" into the username/email field"
+      },
+      {
+        "type": "action",
+        "description": "Type \"{{LOGIN_PASSWORD}}\" into the password field"
+      },
+      {
+        "type": "action",
+        "description": "Click the \"Sign in\" button"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify URL contains \"/\""
+      },
+      {
+        "type": "action",
+        "description": "Click the \"Keyword Mappings\" item in the admin navigation"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify URL contains \"/admin/keywords\""
+      },
+      {
+        "type": "action",
+        "description": "Click the \"Create Mapping\" button"
+      },
+      {
+        "type": "action",
+        "description": "Select \"General\" from the Category dropdown"
+      },
+      {
+        "type": "action",
+        "description": "Select \"Manager\" from the Role dropdown"
+      },
+      {
+        "type": "action",
+        "description": "Type \"  TRIM_TEST  \" into the Keyword field"
+      },
+      {
+        "type": "action",
+        "description": "Type \"Center\" into the Position Hint field"
+      },
+      {
+        "type": "action",
+        "description": "Click the \"Save\" button"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify text \"TRIM_TEST\" is visible"
+      }
+    ]
+  },
+  {
+    "id": "TC042",
+    "title": "Prevent duplicate mapping for same Category + Role (error or block save)",
+    "description": "Verifies the UI handles attempting to create a duplicate mapping for the same Category and Role by showing an error or preventing save.",
+    "category": "Admin — Keyword Mappings",
+    "priority": "High",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /login"
+      },
+      {
+        "type": "action",
+        "description": "Type \"{{LOGIN_USER}}\" into the username/email field"
+      },
+      {
+        "type": "action",
+        "description": "Type \"{{LOGIN_PASSWORD}}\" into the password field"
+      },
+      {
+        "type": "action",
+        "description": "Click the \"Sign in\" button"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify URL contains \"/\""
+      },
+      {
+        "type": "action",
+        "description": "Click the \"Keyword Mappings\" item in the admin navigation"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify URL contains \"/admin/keywords\""
+      },
+      {
+        "type": "action",
+        "description": "Click the \"Create Mapping\" button"
+      },
+      {
+        "type": "action",
+        "description": "Select \"General\" from the Category dropdown"
+      },
+      {
+        "type": "action",
+        "description": "Select \"Manager\" from the Role dropdown"
+      },
+      {
+        "type": "action",
+        "description": "Type \"DUPLICATE_TEST_1\" into the Keyword field"
+      },
+      {
+        "type": "action",
+        "description": "Type \"Bottom\" into the Position Hint field"
+      },
+      {
+        "type": "action",
+        "description": "Click the \"Save\" button"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify text \"DUPLICATE_TEST_1\" is visible"
+      },
+      {
+        "type": "action",
+        "description": "Click the \"Create Mapping\" button"
+      },
+      {
+        "type": "action",
+        "description": "Select \"General\" from the Category dropdown"
+      },
+      {
+        "type": "action",
+        "description": "Select \"Manager\" from the Role dropdown"
+      },
+      {
+        "type": "action",
+        "description": "Type \"DUPLICATE_TEST_2\" into the Keyword field"
+      },
+      {
+        "type": "action",
+        "description": "Type \"Top\" into the Position Hint field"
+      },
+      {
+        "type": "action",
+        "description": "Click the \"Save\" button"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify text \"already exists\" is visible"
+      }
+    ]
+  },
+  {
+    "id": "TC043",
+    "title": "Validation: saving with missing required dropdown selection shows an error",
+    "description": "Verifies the UI shows a validation message when required Category or Role is not selected before saving.",
+    "category": "Admin — Keyword Mappings",
+    "priority": "Medium",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /login"
+      },
+      {
+        "type": "action",
+        "description": "Type \"{{LOGIN_USER}}\" into the username/email field"
+      },
+      {
+        "type": "action",
+        "description": "Type \"{{LOGIN_PASSWORD}}\" into the password field"
+      },
+      {
+        "type": "action",
+        "description": "Click the \"Sign in\" button"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify URL contains \"/\""
+      },
+      {
+        "type": "action",
+        "description": "Click the \"Keyword Mappings\" item in the admin navigation"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify URL contains \"/admin/keywords\""
+      },
+      {
+        "type": "action",
+        "description": "Click the \"Create Mapping\" button"
+      },
+      {
+        "type": "action",
+        "description": "Type \"MISSING_DROPDOWN_TEST\" into the Keyword field"
+      },
+      {
+        "type": "action",
+        "description": "Click the \"Save\" button"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify text \"Category is required\" is visible"
+      }
+    ]
+  },
+  {
+    "id": "TC044",
+    "title": "Activate absence delegation for a user and verify it appears on the user card",
+    "description": "Verifies an admin can set an absence period with a delegate and sees the delegation shown as active on the selected user card.",
+    "category": "Admin — Absence Delegation",
+    "priority": "High",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /login"
+      },
+      {
+        "type": "action",
+        "description": "Type \"{{LOGIN_USER}}\" into the email/username field"
+      },
+      {
+        "type": "action",
+        "description": "Type \"{{LOGIN_PASSWORD}}\" into the password field"
+      },
+      {
+        "type": "action",
+        "description": "Click the \"Sign in\" button"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify URL contains \"/\""
+      },
+      {
+        "type": "action",
+        "description": "Click \"Absence Delegation\" in the admin navigation/menu"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify URL contains \"/admin/delegation"
+      },
+      {
+        "type": "action",
+        "description": "Click \"Set Absence\" on a user card"
+      }
+    ]
+  },
+  {
+    "id": "TC045",
+    "title": "Save absence delegation with valid delegate and dates",
+    "description": "Verifies the Set Absence form accepts a valid delegate and start/end dates and can be saved successfully.",
+    "category": "Admin — Absence Delegation",
+    "priority": "High",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /login"
+      },
+      {
+        "type": "action",
+        "description": "Type \"{{LOGIN_USER}}\" into the email/username field"
+      },
+      {
+        "type": "action",
+        "description": "Type \"{{LOGIN_PASSWORD}}\" into the password field"
+      },
+      {
+        "type": "action",
+        "description": "Click the \"Sign in\" button"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify URL contains \"/\""
+      },
+      {
+        "type": "action",
+        "description": "Click \"Absence Delegation\" in the admin navigation/menu"
+      },
+      {
+        "type": "action",
+        "description": "Click \"Set Absence\" on a user card"
+      },
+      {
+        "type": "action",
+        "description": "Select a valid user from the \"Delegated to\" dropdown"
+      }
+    ]
+  },
+  {
+    "id": "TC046",
+    "title": "Delegation becomes active and visible on the user card after saving",
+    "description": "Verifies that after saving absence delegation, the UI shows an active delegation status on the same user card.",
+    "category": "Admin — Absence Delegation",
+    "priority": "High",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /login"
+      },
+      {
+        "type": "action",
+        "description": "Type \"{{LOGIN_USER}}\" into the email/username field"
+      },
+      {
+        "type": "action",
+        "description": "Type \"{{LOGIN_PASSWORD}}\" into the password field"
+      },
+      {
+        "type": "action",
+        "description": "Click the \"Sign in\" button"
+      },
+      {
+        "type": "action",
+        "description": "Click \"Absence Delegation\" in the admin navigation/menu"
+      },
+      {
+        "type": "action",
+        "description": "Click \"Set Absence\" on a user card"
+      },
+      {
+        "type": "action",
+        "description": "Select a valid user from the \"Delegated to\" dropdown"
+      },
+      {
+        "type": "action",
+        "description": "Click the \"Save\" button"
+      }
+    ]
+  },
+  {
+    "id": "TC047",
+    "title": "Verify active delegation status details are visible on card",
+    "description": "Verifies that the active delegation indicator and key details (delegate and dates) are visibly presented on the user card.",
+    "category": "Admin — Absence Delegation",
+    "priority": "Medium",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /login"
+      },
+      {
+        "type": "action",
+        "description": "Type \"{{LOGIN_USER}}\" into the email/username field"
+      },
+      {
+        "type": "action",
+        "description": "Type \"{{LOGIN_PASSWORD}}\" into the password field"
+      },
+      {
+        "type": "action",
+        "description": "Click the \"Sign in\" button"
+      },
+      {
+        "type": "action",
+        "description": "Click \"Absence Delegation\" in the admin navigation/menu"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify text \"Active\" is visible on at least one user card"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify text \"Delegated to\" is visible on the same card area"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify text \"Start\" is visible on the same card area"
+      }
+    ]
+  },
+  {
+    "id": "TC048",
+    "title": "Delegated approvals are visible in the delegate’s Approvals page (Delegated tab)",
+    "description": "Verifies that a delegate user can see delegated approvals in the Approvals area under the Delegated tab after delegation is active.",
+    "category": "Admin — Absence Delegation",
+    "priority": "High",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /login"
+      },
+      {
+        "type": "action",
+        "description": "Type \"{{LOGIN_USER}}\" into the email/username field"
+      },
+      {
+        "type": "action",
+        "description": "Type \"{{LOGIN_PASSWORD}}\" into the password field"
+      },
+      {
+        "type": "action",
+        "description": "Click the \"Sign in\" button"
+      },
+      {
+        "type": "action",
+        "description": "Click \"Approvals\" in the main navigation/menu"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify URL contains \"/approvals\""
+      },
+      {
+        "type": "action",
+        "description": "Click the \"Delegated\" tab"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify text \"Delegated\" is visible"
+      }
+    ]
+  },
+  {
+    "id": "TC049",
+    "title": "Show error when an invalid delegate is selected",
+    "description": "Verifies the system blocks saving when the delegate selection is invalid and shows the specified validation error message.",
+    "category": "Admin — Absence Delegation",
+    "priority": "High",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /login"
+      },
+      {
+        "type": "action",
+        "description": "Type \"{{LOGIN_USER}}\" into the email/username field"
+      },
+      {
+        "type": "action",
+        "description": "Type \"{{LOGIN_PASSWORD}}\" into the password field"
+      },
+      {
+        "type": "action",
+        "description": "Click the \"Sign in\" button"
+      },
+      {
+        "type": "action",
+        "description": "Click \"Absence Delegation\" in the admin navigation/menu"
+      },
+      {
+        "type": "action",
+        "description": "Click \"Set Absence\" on a user card"
+      },
+      {
+        "type": "action",
+        "description": "Select \"Invalid user\" from the \"Delegated to\" dropdown"
+      },
+      {
+        "type": "action",
+        "description": "Click the \"Save\" button"
+      }
+    ]
+  },
+  {
+    "id": "TC050",
+    "title": "Prevent saving when end date is earlier than start date",
+    "description": "Verifies the UI prevents saving when the selected absence end date precedes the start date and shows an on-screen validation message.",
+    "category": "Admin — Absence Delegation",
+    "priority": "Medium",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /login"
+      },
+      {
+        "type": "action",
+        "description": "Type \"{{LOGIN_USER}}\" into the email/username field"
+      },
+      {
+        "type": "action",
+        "description": "Type \"{{LOGIN_PASSWORD}}\" into the password field"
+      },
+      {
+        "type": "action",
+        "description": "Click the \"Sign in\" button"
+      },
+      {
+        "type": "action",
+        "description": "Click \"Absence Delegation\" in the admin navigation/menu"
+      },
+      {
+        "type": "action",
+        "description": "Click \"Set Absence\" on a user card"
+      },
+      {
+        "type": "action",
+        "description": "Click the \"Start date\" field"
+      },
+      {
+        "type": "action",
+        "description": "Click the \"End date\" field"
+      }
+    ]
+  },
+  {
+    "id": "TC051",
+    "title": "Cancel/close Set Absence without saving does not change the card",
+    "description": "Verifies that closing the Set Absence dialog/form without saving leaves the user card unchanged (no new active delegation shown).",
+    "category": "Admin — Absence Delegation",
+    "priority": "Low",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /login"
+      },
+      {
+        "type": "action",
+        "description": "Type \"{{LOGIN_USER}}\" into the email/username field"
+      },
+      {
+        "type": "action",
+        "description": "Type \"{{LOGIN_PASSWORD}}\" into the password field"
+      },
+      {
+        "type": "action",
+        "description": "Click the \"Sign in\" button"
+      },
+      {
+        "type": "action",
+        "description": "Click \"Absence Delegation\" in the admin navigation/menu"
+      },
+      {
+        "type": "action",
+        "description": "Click \"Set Absence\" on a user card"
+      },
+      {
+        "type": "action",
+        "description": "Click the \"Cancel\" button"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify text \"Set Absence\" is not visible"
+      }
+    ]
+  },
+  {
+    "id": "TC052",
+    "title": "Save profile changes (display name) successfully",
+    "description": "Verifies a user can update their display name in Settings and sees a success confirmation with updated values visible.",
+    "category": "Settings & Profile",
+    "priority": "High",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /login"
+      },
+      {
+        "type": "action",
+        "description": "Type \"{{LOGIN_USER}}\" into the email/username field"
+      },
+      {
+        "type": "action",
+        "description": "Type \"{{LOGIN_PASSWORD}}\" into the password field"
+      },
+      {
+        "type": "action",
+        "description": "Click the \"Log in\" button"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify URL contains \"/\""
+      },
+      {
+        "type": "action",
+        "description": "Click on \"Settings\" in the main navigation/menu"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify URL contains \"/settings\""
+      },
+      {
+        "type": "assertion",
+        "description": "Verify element \"Save\" is visible"
+      }
+    ]
+  }
+]
