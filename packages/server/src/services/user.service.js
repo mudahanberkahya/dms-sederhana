@@ -1,22 +1,7 @@
-import crypto from 'crypto';
 import { eq, and } from 'drizzle-orm';
+import { hashPassword } from 'better-auth/crypto';
 import { db } from '../db/index.js';
 import { user, userProfile, account } from '../db/schema.js';
-import { auth } from '../auth.js';
-
-/**
- * Hash password using scrypt (same algorithm Better Auth uses internally).
- * Format: salt:hash (both hex encoded)
- */
-function hashPassword(password) {
-    const salt = crypto.randomBytes(16).toString('hex');
-    return new Promise((resolve, reject) => {
-        crypto.scrypt(password, salt, 64, (err, derivedKey) => {
-            if (err) reject(err);
-            resolve(`${salt}:${derivedKey.toString('hex')}`);
-        });
-    });
-}
 
 export const UserService = {
     /**

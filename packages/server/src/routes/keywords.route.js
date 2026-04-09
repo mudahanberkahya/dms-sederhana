@@ -19,7 +19,7 @@ router.get('/', requireAuth, requireRole('admin'), async (req, res) => {
 
 router.post('/', requireAuth, requireRole('admin'), async (req, res) => {
     try {
-        const { category, branch, role, keyword, offset_x, offset_y, positionHint } = req.body;
+        const { category, sub_category, branch, role, keyword, offset_x, offset_y, positionHint } = req.body;
 
         if (!category || !role || !keyword) {
             return res.status(400).json({ error: "Missing required fields" });
@@ -27,6 +27,7 @@ router.post('/', requireAuth, requireRole('admin'), async (req, res) => {
 
         const newMapping = await KeywordService.addKeywordMapping({ 
             category, 
+            sub_category: sub_category || null,
             branch: branch || 'All', 
             role, 
             keyword, 
@@ -43,7 +44,7 @@ router.post('/', requireAuth, requireRole('admin'), async (req, res) => {
 
 router.put('/:id', requireAuth, requireRole('admin'), async (req, res) => {
     try {
-        const { category, branch, role, keyword, offset_x, offset_y, positionHint } = req.body;
+        const { category, sub_category, branch, role, keyword, offset_x, offset_y, positionHint } = req.body;
 
         if (!category || !role || !keyword) {
             return res.status(400).json({ error: "Missing required fields" });
@@ -51,6 +52,7 @@ router.put('/:id', requireAuth, requireRole('admin'), async (req, res) => {
 
         const updatedMapping = await KeywordService.updateKeywordMapping(req.params.id, { 
             category, 
+            sub_category: sub_category || null,
             branch: branch || 'All', 
             role, 
             keyword, 

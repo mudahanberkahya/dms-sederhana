@@ -238,18 +238,44 @@ export const ApprovalService = {
                     let stampedFilePath = null;
                     const [sig] = await tx.select().from(signature).where(eq(signature.userId, userId)).limit(1);
                     if (sig) {
-                        // REFINED: Strictly filter keyword mapping by category, role AND branch
-                        const kwResults = await tx.select().from(keywordMapping)
-                            .where(
-                                and(
-                                    eq(keywordMapping.category, doc.category),
-                                    eq(keywordMapping.role, currentStep.roleRequired),
-                                    or(
-                                        eq(keywordMapping.branch, doc.branch),
-                                        eq(keywordMapping.branch, 'All')
+                        // REFINED: Strictly filter keyword mapping by category, role, branch AND sub_category
+                        let kwResults = [];
+                        
+                        // First: try exact match with sub_category
+                        if (doc.subCategory) {
+                            kwResults = await tx.select().from(keywordMapping)
+                                .where(
+                                    and(
+                                        eq(keywordMapping.category, doc.category),
+                                        eq(keywordMapping.role, currentStep.roleRequired),
+                                        eq(keywordMapping.subCategory, doc.subCategory),
+                                        or(
+                                            eq(keywordMapping.branch, doc.branch),
+                                            eq(keywordMapping.branch, 'All')
+                                        )
                                     )
-                                )
-                            );
+                                );
+                        }
+                        
+                        // Fallback: keyword mappings without sub_category
+                        if (kwResults.length === 0) {
+                            kwResults = await tx.select().from(keywordMapping)
+                                .where(
+                                    and(
+                                        eq(keywordMapping.category, doc.category),
+                                        eq(keywordMapping.role, currentStep.roleRequired),
+                                        or(
+                                            eq(keywordMapping.branch, doc.branch),
+                                            eq(keywordMapping.branch, 'All')
+                                        )
+                                    )
+                                );
+                            // Further filter: prefer null sub_category fallback
+                            const nullSubCat = kwResults.filter(k => !k.subCategory);
+                            if (nullSubCat.length > 0) {
+                                kwResults = nullSubCat;
+                            }
+                        }
                             
                         // Prioritize exact branch match, else fallback to 'All'
                         const kw = kwResults.find(k => k.branch === doc.branch) || kwResults.find(k => k.branch === 'All');

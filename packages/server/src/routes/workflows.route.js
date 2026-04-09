@@ -21,13 +21,15 @@ router.get('/:category', requireAuth, requireRole('admin'), async (req, res) => 
 
 router.post('/', requireAuth, requireRole('admin'), async (req, res) => {
     try {
-        const { category, branch, steps } = req.body;
+        const { category, branch, steps, subCategory } = req.body;
+        console.log(`[Workflow Save] category=${category}, branch=${branch}, subCategory=${subCategory || 'null'}, steps=${steps?.length}`);
 
         if (!category || !branch || !Array.isArray(steps)) {
             return res.status(400).json({ error: "Invalid data format" });
         }
 
-        const result = await WorkflowService.saveWorkflow(category, branch, steps);
+        const result = await WorkflowService.saveWorkflow(category, branch, steps, subCategory || null);
+        console.log(`[Workflow Save] Success! workflowId=${result.id}`);
         res.status(201).json({ message: "Workflow saved", workflowId: result.id });
     } catch (err) {
         console.error("Save Workflow Error:", err);

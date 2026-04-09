@@ -185,5 +185,9 @@ export const api = {
         get: () => fetchApi('/profile')
     },
 
-    search: (query) => fetchApi(`/search?q=${encodeURIComponent(query)}`)
+    search: (query) => fetchApi(`/search?q=${encodeURIComponent(query)}`),
+
+    subcategories: {
+        list: (category) => fetchApi(`/subcategories?category=${encodeURIComponent(category)}`)
+    }
 };

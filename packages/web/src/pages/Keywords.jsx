@@ -25,6 +25,7 @@ export default function Keywords() {
     const [adding, setAdding] = useState(false);
     const [newMapping, setNewMapping] = useState({
         category: '',
+        sub_category: '',
         branch: 'Astara Hotel',
         role: '',
         keyword: '',
@@ -72,7 +73,7 @@ export default function Keywords() {
         try {
             await api.admin.keywords.add(newMapping);
             setShowAddModal(false);
-            setNewMapping({ category: categories[0]?.id || '', branch: 'Astara Hotel', role: roles[0]?.id || '', keyword: '', offset_x: 0, offset_y: 0, positionHint: 'Below signature line' });
+            setNewMapping({ category: categories[0]?.id || '', sub_category: '', branch: 'Astara Hotel', role: roles[0]?.id || '', keyword: '', offset_x: 0, offset_y: 0, positionHint: 'Below signature line' });
             await fetchKeywords();
         } catch (err) {
             alert("Failed to add keyword mapping: " + err.message);
@@ -134,6 +135,7 @@ export default function Keywords() {
                         <thead>
                             <tr>
                                 <th>Document Category</th>
+                                <th>Sub-Category</th>
                                 <th>Branch</th>
                                 <th>Role</th>
                                 <th>Keyword</th>
@@ -146,6 +148,7 @@ export default function Keywords() {
                             {keywords.map(row => (
                                 <tr key={row.id}>
                                     <td><span className={`badge ${categoryBadgeClass(row.category)}`}>{row.category}</span></td>
+                                    <td className="text-muted" style={{ fontSize: '0.85rem' }}>{row.subCategory || '—'}</td>
                                     <td className="text-muted">{row.branch || 'All'}</td>
                                     <td><span className="role-tag">{row.role.replace('_', ' ').toUpperCase()}</span></td>
                                     <td><span className="keyword-cell">{row.keyword}</span></td>
@@ -188,6 +191,11 @@ export default function Keywords() {
                                     <select className="form-input" value={newMapping.category} onChange={e => setNewMapping({ ...newMapping, category: e.target.value })}>
                                         {categories.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
                                     </select>
+                                </div>
+                                <div className="form-group">
+                                    <label className="form-label">Sub-Category (Optional)</label>
+                                    <input className="form-input" placeholder="e.g. 'Cluster Memo'" value={newMapping.sub_category} onChange={e => setNewMapping({ ...newMapping, sub_category: e.target.value })} />
+                                    <p className="text-muted" style={{ fontSize: '0.75rem', marginTop: '4px' }}>Leave empty for default keyword mapping.</p>
                                 </div>
                                 <div className="form-group">
                                     <label className="form-label">Branch</label>
@@ -275,6 +283,10 @@ export default function Keywords() {
                                     <select className="form-input" value={editItem.category} onChange={e => setEditItem({ ...editItem, category: e.target.value })}>
                                         {categories.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
                                     </select>
+                                </div>
+                                <div className="form-group">
+                                    <label className="form-label">Sub-Category (Optional)</label>
+                                    <input className="form-input" placeholder="e.g. 'Cluster Memo'" value={editItem.sub_category || editItem.subCategory || ''} onChange={e => setEditItem({ ...editItem, sub_category: e.target.value, subCategory: e.target.value })} />
                                 </div>
                                 <div className="form-group">
                                     <label className="form-label">Branch</label>

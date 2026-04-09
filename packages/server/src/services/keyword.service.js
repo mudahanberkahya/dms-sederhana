@@ -15,9 +15,10 @@ export const KeywordService = {
      * Add a new keyword mapping
      */
     async addKeywordMapping(data) {
-        const { category, branch, role, keyword, offset_x, offset_y, positionHint } = data;
+        const { category, sub_category, branch, role, keyword, offset_x, offset_y, positionHint } = data;
         const [newMapping] = await db.insert(keywordMapping).values({
             category,
+            subCategory: sub_category || null,
             branch,
             role,
             keyword,
@@ -32,9 +33,10 @@ export const KeywordService = {
      * Update an existing keyword mapping
      */
     async updateKeywordMapping(id, data) {
-        const { category, branch, role, keyword, offset_x, offset_y, positionHint } = data;
+        const { category, sub_category, branch, role, keyword, offset_x, offset_y, positionHint } = data;
         const [updatedMapping] = await db.update(keywordMapping).set({
             category,
+            subCategory: sub_category || null,
             branch,
             role,
             keyword,

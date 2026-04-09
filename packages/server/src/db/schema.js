@@ -101,6 +101,7 @@ export const document = pgTable("document", {
     displayId: varchar("display_id", { length: 50 }).notNull().unique(), // e.g., PO-2026-0042
     title: text("title").notNull(),
     category: varchar("category", { length: 50 }).notNull(), // PO, CA, PETTY_CASH, MEMO
+    subCategory: varchar("sub_category", { length: 100 }), // e.g., Cluster Memo, Internal Memo
     branch: varchar("branch", { length: 255 }).notNull(),
     department: varchar("department", { length: 100 }), // e.g., FO, FB, HR (crucial for HOD routing)
     notes: text("notes"), // Optional notes from uploader for approvers
@@ -115,6 +116,7 @@ export const document = pgTable("document", {
 export const workflow = pgTable("workflow", {
     id: uuid("id").defaultRandom().primaryKey(),
     category: varchar("category", { length: 50 }).notNull(), // PO, CA, PETTY_CASH, MEMO
+    subCategory: varchar("sub_category", { length: 100 }), // e.g., Cluster Memo, Internal Memo
     branch: varchar("branch", { length: 255 }).notNull(), // Can be 'All' for global workflows
     createdAt: timestamp("created_at").defaultNow().notNull()
 });
@@ -145,6 +147,7 @@ export const approval = pgTable("approval", {
 export const keywordMapping = pgTable("keyword_mapping", {
     id: uuid("id").defaultRandom().primaryKey(),
     category: varchar("category", { length: 50 }).notNull(),
+    subCategory: varchar("sub_category", { length: 100 }), // e.g., Cluster Memo, Internal Memo
     branch: varchar("branch", { length: 255 }).notNull().default('All'),
     role: varchar("role", { length: 100 }).notNull(),
     keyword: text("keyword").notNull(),

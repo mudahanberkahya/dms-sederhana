@@ -1,4 +1,4 @@
-import { eq, desc, sql, and, gte, lte } from 'drizzle-orm';
+import { eq, desc, sql, and, gte, lte, isNull } from 'drizzle-orm';
 import fs from 'fs';
 import path from 'path';
 import { db } from '../db/index.js';
@@ -11,7 +11,7 @@ export const DocumentService = {
      * Create a new document and initialize its approval chain.
      */
     async createDocument(data) {
-        const { title, category, branch, department, notes, filePath, originalName, uploadedBy } = data;
+        const { title, category, subCategory, branch, department, notes, filePath, originalName, uploadedBy } = data;
 
         return await db.transaction(async (tx) => {
             // 1. Generate displayId based on category, year, and sequence
@@ -49,6 +49,7 @@ export const DocumentService = {
                 displayId,
                 title,
                 category,
+                subCategory: subCategory || null,
                 branch,
                 department,
                 notes,
@@ -57,21 +58,53 @@ export const DocumentService = {
                 status: 'PENDING'
             }).returning();
 
-            // 3. Find workflow for this category and branch
-            console.log(`[DocumentService] Looking for workflow: category="${category}", branch="${branch}"`);
-            let wf = await tx.select().from(workflow)
-                .where(and(
-                    eq(workflow.category, category),
-                    eq(workflow.branch, branch)
-                ))
-                .limit(1);
+            // 3. Find workflow for this category, branch, and subCategory
+            console.log(`[DocumentService] Looking for workflow: category="${category}", branch="${branch}", subCategory="${subCategory || 'null'}"`);
+            
+            // Try exact match: category + branch + subCategory
+            let wf = [];
+            if (subCategory) {
+                wf = await tx.select().from(workflow)
+                    .where(and(
+                        eq(workflow.category, category),
+                        eq(workflow.branch, branch),
+                        eq(workflow.subCategory, subCategory)
+                    ))
+                    .limit(1);
+                    
+                // Fallback: category + 'All' branch + subCategory
+                if (wf.length === 0) {
+                    console.log(`[DocumentService] No branch-specific workflow with subCategory. Trying branch="All" + subCategory="${subCategory}"`);
+                    wf = await tx.select().from(workflow)
+                        .where(and(
+                            eq(workflow.category, category),
+                            eq(workflow.branch, 'All'),
+                            eq(workflow.subCategory, subCategory)
+                        ))
+                        .limit(1);
+                }
+            }
 
+            // Fallback: category + branch + null subCategory
+            if (wf.length === 0) {
+                console.log(`[DocumentService] No subCategory workflow found. Trying default: category + branch + null subCategory`);
+                wf = await tx.select().from(workflow)
+                    .where(and(
+                        eq(workflow.category, category),
+                        eq(workflow.branch, branch),
+                        isNull(workflow.subCategory)
+                    ))
+                    .limit(1);
+            }
+
+            // Final fallback: category + 'All' + null subCategory
             if (wf.length === 0) {
                 console.log(`[DocumentService] No specific branch workflow found. Falling back to branch="All"`);
                 wf = await tx.select().from(workflow)
                     .where(and(
                         eq(workflow.category, category),
-                        eq(workflow.branch, 'All')
+                        eq(workflow.branch, 'All'),
+                        isNull(workflow.subCategory)
                     ))
                     .limit(1);
             }

@@ -76,6 +76,7 @@ import categoriesAdminRouter from './routes/categories.route.js';
 import departmentsAdminRouter from './routes/departments.route.js';
 import searchRouter from './routes/search.route.js';
 import profileRouter from './routes/profile.route.js';
+import subcategoriesRouter from './routes/subcategories.route.js';
 
 app.use('/api/documents', docsRouter);
 app.use('/api/approvals', approvalsRouter);
@@ -88,6 +89,7 @@ app.use('/api/admin/categories', categoriesAdminRouter);
 app.use('/api/admin/departments', departmentsAdminRouter);
 app.use('/api/search', searchRouter);
 app.use('/api/profile', profileRouter);
+app.use('/api/subcategories', subcategoriesRouter);
 
 // Health Check
 app.get('/api/health', (req, res) => {

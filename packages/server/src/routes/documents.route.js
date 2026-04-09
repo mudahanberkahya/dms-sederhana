@@ -115,7 +115,7 @@ router.get('/:id/file', requireAuth, async (req, res) => {
 // POST /api/documents (Upload new document)
 router.post('/', requireAuth, upload.single('documentFile'), async (req, res) => {
     try {
-        const { title, category, branch, department, notes } = req.body;
+        const { title, category, branch, department, notes, subCategory } = req.body;
 
         if (!req.file) {
             return res.status(400).json({ error: "No PDF file uploaded" });
@@ -140,6 +140,7 @@ router.post('/', requireAuth, upload.single('documentFile'), async (req, res) =>
         const data = {
             title,
             category,
+            subCategory: subCategory || null,
             branch,
             department: department || null,
             notes: notes || null,

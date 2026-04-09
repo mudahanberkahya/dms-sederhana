@@ -1,4 +1,4 @@
-import { eq, and } from 'drizzle-orm';
+import { eq, and, isNull } from 'drizzle-orm';
 import { db } from '../db/index.js';
 import { workflow, workflowStep } from '../db/schema.js';
 
@@ -22,22 +22,32 @@ export const WorkflowService = {
 
     /**
      * Create or update a workflow chain
-     * Note: In a complete app, we'd handle updating carefully so active documents aren't broken.
-     * For MVP, we'll just delete and recreate steps if workflow exists.
+     * Now supports sub_category for more specific workflow routing.
      */
-    async saveWorkflow(category, branch, stepsArray) {
+    async saveWorkflow(category, branch, stepsArray, subCategory = null) {
         return await db.transaction(async (tx) => {
-            // 1. Check if workflow exists for this category + branch combo
+            // 1. Check if workflow exists for this category + branch + subCategory combo
+            const conditions = [
+                eq(workflow.category, category),
+                eq(workflow.branch, branch)
+            ];
+            if (subCategory) {
+                conditions.push(eq(workflow.subCategory, subCategory));
+            } else {
+                conditions.push(isNull(workflow.subCategory));
+            }
+
             let [wf] = await tx.select().from(workflow)
-                .where(and(
-                    eq(workflow.category, category),
-                    eq(workflow.branch, branch)
-                ))
+                .where(and(...conditions))
                 .limit(1);
 
             // 2. Insert workflow if not exists
             if (!wf) {
-                [wf] = await tx.insert(workflow).values({ category, branch }).returning();
+                [wf] = await tx.insert(workflow).values({ 
+                    category, 
+                    branch,
+                    subCategory: subCategory || null
+                }).returning();
             } else {
                 // 3. Delete existing steps if updating
                 await tx.delete(workflowStep).where(eq(workflowStep.workflowId, wf.id));

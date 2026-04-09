@@ -1,4 +1,4 @@
-import { useState, useContext } from 'react';
+import { useState, useEffect, useContext } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { api } from '../lib/api';
 import { AppContext } from '../App';
@@ -20,11 +20,28 @@ export default function Upload() {
     const [currentStep, setCurrentStep] = useState(0);
     const [file, setFile] = useState(null);
     const [category, setCategory] = useState('');
+    const [subCategory, setSubCategory] = useState('');
+    const [subCategories, setSubCategories] = useState([]);
     const [branch, setBranch] = useState(userBranches?.[0] || 'Astara Hotel');
     const [department, setDepartment] = useState(userDepartment || 'GENERAL');
     const [notes, setNotes] = useState('');
     const [isUploading, setIsUploading] = useState(false);
     const [error, setError] = useState('');
+
+    // Fetch sub-categories when category changes
+    useEffect(() => {
+        if (category) {
+            api.subcategories.list(category)
+                .then(data => {
+                    setSubCategories(data || []);
+                    setSubCategory(''); // Reset when category changes
+                })
+                .catch(() => setSubCategories([]));
+        } else {
+            setSubCategories([]);
+            setSubCategory('');
+        }
+    }, [category]);
 
     const next = () => {
         if (currentStep < 2) setCurrentStep(currentStep + 1);
@@ -45,6 +62,7 @@ export default function Upload() {
             formData.append('category', category);
             formData.append('branch', branch);
             formData.append('department', department);
+            if (subCategory) formData.append('subCategory', subCategory);
             if (notes) formData.append('notes', notes);
 
             await api.documents.upload(formData);
@@ -147,6 +165,26 @@ export default function Upload() {
                             </div>
                         </div>
 
+                        {/* Sub-Category Dropdown — only shown if sub-categories exist for selected category */}
+                        {subCategories.length > 0 && (
+                            <div className="form-group">
+                                <label className="form-label">Document Type / Sub-Category</label>
+                                <select
+                                    className="form-select"
+                                    value={subCategory}
+                                    onChange={(e) => setSubCategory(e.target.value)}
+                                >
+                                    <option value="">— Default (No Sub-Category) —</option>
+                                    {subCategories.map(sc => (
+                                        <option key={sc} value={sc}>{sc}</option>
+                                    ))}
+                                </select>
+                                <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '4px' }}>
+                                    Select a specific document type to use the correct approval workflow.
+                                </p>
+                            </div>
+                        )}
+
                         <div className="form-group" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
                             <div>
                                 <label className="form-label">Branch *</label>
@@ -203,6 +241,12 @@ export default function Upload() {
                                 <span className="info-label">Category</span>
                                 <span className={`badge badge-${category.toLowerCase().replace(' ', '-')}`}>{category || '—'}</span>
                             </div>
+                            {subCategory && (
+                                <div className="review-item">
+                                    <span className="info-label">Sub-Category</span>
+                                    <span className="info-value">{subCategory}</span>
+                                </div>
+                            )}
                             <div className="review-item">
                                 <span className="info-label">Branch</span>
                                 <span className="info-value">{branch}</span>
@@ -220,7 +264,7 @@ export default function Upload() {
                         </div>
                         <div className="review-workflow">
                             <h4>Approval Workflow</h4>
-                            <p className="text-muted">This document will be routed through the standard {category || 'document'} approval chain for {branch}.</p>
+                            <p className="text-muted">This document will be routed through the {subCategory ? `${subCategory} ` : 'standard '}{category || 'document'} approval chain for {branch}.</p>
                         </div>
                     </div>
                 )}
@@ -260,3 +304,4 @@ export default function Upload() {
         </div>
     );
 }
+
