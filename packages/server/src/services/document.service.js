@@ -11,7 +11,7 @@ export const DocumentService = {
      * Create a new document and initialize its approval chain.
      */
     async createDocument(data) {
-        const { title, category, subCategory, branch, department, notes, filePath, originalName, uploadedBy } = data;
+        const { title, category, subCategory, branch, department, notes, filePath, originalName, uploadedBy, dynamicDepartments = [] } = data;
 
         return await db.transaction(async (tx) => {
             // 1. Generate displayId based on category, year, and sequence
@@ -120,20 +120,39 @@ export const DocumentService = {
 
                 // 5. Create approval chain entries
                 if (steps.length > 0) {
-                    const approvalsToInsert = steps.map((step, index) => ({
-                        documentId: newDoc.id,
-                        stepOrder: step.stepOrder,
-                        roleRequired: step.roleRequired,
-                        assignedUserId: null,
-                        status: index === 0 ? 'PENDING' : 'LOCKED',
-                    }));
+                    const approvalsToInsert = steps.map((step, index) => {
+                        let targetDepartment = null;
+                        if (step.isDynamicDepartment) {
+                            const dynDept = dynamicDepartments.find(d => parseInt(d.stepOrder) === step.stepOrder);
+                            if (dynDept && dynDept.department) {
+                                targetDepartment = dynDept.department;
+                                console.log(`[DocumentService] Mapped dynamic targetDepartment=${targetDepartment} for stepOrder=${step.stepOrder}`);
+                            }
+                        }
+
+                        return {
+                            documentId: newDoc.id,
+                            stepOrder: step.stepOrder,
+                            roleRequired: step.roleRequired,
+                            targetDepartment, // Add target department derived from dynamic config
+                            assignedUserId: null,
+                            status: index === 0 ? 'PENDING' : 'LOCKED',
+                        };
+                    });
 
                     const insertedApprovals = await tx.insert(approval).values(approvalsToInsert).returning();
                     console.log(`[DocumentService] Inserted ${insertedApprovals.length} approval entries`);
 
                     if (insertedApprovals.length > 0) {
                         const firstStep = insertedApprovals[0];
-                        await ApprovalService.assignStepToUser(tx, firstStep.id, firstStep.roleRequired, branch, department);
+                        // Pass targetDepartment or fallback to the document's general department (if any)
+                        await ApprovalService.assignStepToUser(
+                            tx, 
+                            firstStep.id, 
+                            firstStep.roleRequired, 
+                            branch, 
+                            firstStep.targetDepartment || department
+                        );
                     }
                 } else {
                     throw new Error(`Workflow found but contains no steps for category: ${category}`);

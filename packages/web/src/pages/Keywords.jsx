@@ -19,6 +19,18 @@ export default function Keywords() {
     const { categories, roles } = useContext(AppContext);
     const [keywords, setKeywords] = useState([]);
     const [loading, setLoading] = useState(true);
+    const [categoryWorkflows, setCategoryWorkflows] = useState([]); // Stores workflows to extract subCategories
+
+
+    // Predefined Position Hints
+    const POSITION_HINTS = [
+        "Above Signature Line",
+        "Below Signature Line",
+        "Left",
+        "Right",
+        "Center",
+        "Auto-placed using keyword search"
+    ];
 
     // Add Modal State
     const [showAddModal, setShowAddModal] = useState(false);
@@ -31,7 +43,8 @@ export default function Keywords() {
         keyword: '',
         offset_x: 0,
         offset_y: 0,
-        positionHint: 'Below signature line'
+        positionHint: 'Below Signature Line',
+        step_order: ''
     });
 
     // Delete Modal State
@@ -41,6 +54,17 @@ export default function Keywords() {
     // Edit Modal State
     const [editItem, setEditItem] = useState(null);
     const [editing, setEditing] = useState(false);
+
+    // Fetch workflows when newMapping or editItem category changes
+    useEffect(() => {
+        const catId = newMapping.category || editItem?.category;
+        if (!catId) return;
+        api.admin.workflows.get(catId)
+            .then(data => setCategoryWorkflows(data))
+            .catch(console.error);
+    }, [newMapping.category, editItem?.category]);
+
+    const activeSubCategories = [...new Set(categoryWorkflows.filter(w => w.subCategory).map(w => w.subCategory))];
 
     const fetchKeywords = async () => {
         try {
@@ -71,9 +95,12 @@ export default function Keywords() {
         e.preventDefault();
         setAdding(true);
         try {
-            await api.admin.keywords.add(newMapping);
+            await api.admin.keywords.add({
+                ...newMapping,
+                step_order: newMapping.step_order ? parseInt(newMapping.step_order) : null
+            });
             setShowAddModal(false);
-            setNewMapping({ category: categories[0]?.id || '', sub_category: '', branch: 'Astara Hotel', role: roles[0]?.id || '', keyword: '', offset_x: 0, offset_y: 0, positionHint: 'Below signature line' });
+            setNewMapping({ category: categories[0]?.id || '', sub_category: '', branch: 'Astara Hotel', role: roles[0]?.id || '', keyword: '', offset_x: 0, offset_y: 0, positionHint: 'Below Signature Line', step_order: '' });
             await fetchKeywords();
         } catch (err) {
             alert("Failed to add keyword mapping: " + err.message);
@@ -99,7 +126,11 @@ export default function Keywords() {
         e.preventDefault();
         setEditing(true);
         try {
-            await api.admin.keywords.update(editItem.id, editItem);
+            const payload = {
+                ...editItem,
+                step_order: editItem.step_order ? parseInt(editItem.step_order) : null
+            };
+            await api.admin.keywords.update(editItem.id, payload);
             setEditItem(null);
             await fetchKeywords();
         } catch (err) {
@@ -194,8 +225,13 @@ export default function Keywords() {
                                 </div>
                                 <div className="form-group">
                                     <label className="form-label">Sub-Category (Optional)</label>
-                                    <input className="form-input" placeholder="e.g. 'Cluster Memo'" value={newMapping.sub_category} onChange={e => setNewMapping({ ...newMapping, sub_category: e.target.value })} />
-                                    <p className="text-muted" style={{ fontSize: '0.75rem', marginTop: '4px' }}>Leave empty for default keyword mapping.</p>
+                                    <select className="form-input" value={newMapping.sub_category} onChange={e => setNewMapping({ ...newMapping, sub_category: e.target.value })}>
+                                        <option value="">Default (No Sub-Category)</option>
+                                        {activeSubCategories.map(sc => (
+                                            <option key={sc} value={sc}>{sc}</option>
+                                        ))}
+                                    </select>
+                                    <p className="text-muted" style={{ fontSize: '0.75rem', marginTop: '4px' }}>Maps to active workflows.</p>
                                 </div>
                                 <div className="form-group">
                                     <label className="form-label">Branch</label>
@@ -205,11 +241,17 @@ export default function Keywords() {
                                         <option value="All">All Branches (Global Fallback)</option>
                                     </select>
                                 </div>
-                                <div className="form-group">
-                                    <label className="form-label">Role Target</label>
-                                    <select className="form-input" value={newMapping.role} onChange={e => setNewMapping({ ...newMapping, role: e.target.value })}>
-                                        {roles.map(r => <option key={r.id} value={r.id}>{r.name.toUpperCase()}</option>)}
-                                    </select>
+                                <div style={{ display: 'flex', gap: '12px' }}>
+                                    <div className="form-group" style={{ flex: 1 }}>
+                                        <label className="form-label">Role Target</label>
+                                        <select className="form-input" value={newMapping.role} onChange={e => setNewMapping({ ...newMapping, role: e.target.value })}>
+                                            {roles.map(r => <option key={r.id} value={r.id}>{r.name.toUpperCase()}</option>)}
+                                        </select>
+                                    </div>
+                                    <div className="form-group" style={{ flex: 0.5 }}>
+                                        <label className="form-label">Step Order (Opt)</label>
+                                        <input type="number" min="1" className="form-input" placeholder="e.g. 1" value={newMapping.step_order} onChange={e => setNewMapping({ ...newMapping, step_order: e.target.value })} />
+                                    </div>
                                 </div>
                                 <div className="form-group">
                                     <label className="form-label">Keyword text in PDF</label>
@@ -230,7 +272,11 @@ export default function Keywords() {
                                 </div>
                                 <div className="form-group">
                                     <label className="form-label">Position Hint (Optional)</label>
-                                    <input className="form-input" placeholder="e.g. 'Below the table'" value={newMapping.positionHint} onChange={e => setNewMapping({ ...newMapping, positionHint: e.target.value })} />
+                                    <select className="form-input" value={newMapping.positionHint} onChange={e => setNewMapping({ ...newMapping, positionHint: e.target.value })}>
+                                        {POSITION_HINTS.map(hint => (
+                                            <option key={hint} value={hint}>{hint}</option>
+                                        ))}
+                                    </select>
                                 </div>
                             </div>
                             <div className="modal-footer">
@@ -286,7 +332,12 @@ export default function Keywords() {
                                 </div>
                                 <div className="form-group">
                                     <label className="form-label">Sub-Category (Optional)</label>
-                                    <input className="form-input" placeholder="e.g. 'Cluster Memo'" value={editItem.sub_category || editItem.subCategory || ''} onChange={e => setEditItem({ ...editItem, sub_category: e.target.value, subCategory: e.target.value })} />
+                                    <select className="form-input" value={editItem.sub_category || editItem.subCategory || ''} onChange={e => setEditItem({ ...editItem, sub_category: e.target.value, subCategory: e.target.value })}>
+                                        <option value="">Default (No Sub-Category)</option>
+                                        {activeSubCategories.map(sc => (
+                                            <option key={sc} value={sc}>{sc}</option>
+                                        ))}
+                                    </select>
                                 </div>
                                 <div className="form-group">
                                     <label className="form-label">Branch</label>
@@ -296,11 +347,17 @@ export default function Keywords() {
                                         <option value="All">All Branches (Global Fallback)</option>
                                     </select>
                                 </div>
-                                <div className="form-group">
-                                    <label className="form-label">Role Target</label>
-                                    <select className="form-input" value={editItem.role} onChange={e => setEditItem({ ...editItem, role: e.target.value })}>
-                                        {roles.map(r => <option key={r.id} value={r.id}>{r.name.toUpperCase()}</option>)}
-                                    </select>
+                                <div style={{ display: 'flex', gap: '12px' }}>
+                                    <div className="form-group" style={{ flex: 1 }}>
+                                        <label className="form-label">Role Target</label>
+                                        <select className="form-input" value={editItem.role} onChange={e => setEditItem({ ...editItem, role: e.target.value })}>
+                                            {roles.map(r => <option key={r.id} value={r.id}>{r.name.toUpperCase()}</option>)}
+                                        </select>
+                                    </div>
+                                    <div className="form-group" style={{ flex: 0.5 }}>
+                                        <label className="form-label">Step Order (Opt)</label>
+                                        <input type="number" min="1" className="form-input" placeholder="e.g. 1" value={editItem.stepOrder || editItem.step_order || ''} onChange={e => setEditItem({ ...editItem, step_order: e.target.value, stepOrder: e.target.value })} />
+                                    </div>
                                 </div>
                                 <div className="form-group">
                                     <label className="form-label">Keyword text in PDF</label>
@@ -320,7 +377,11 @@ export default function Keywords() {
                                 </div>
                                 <div className="form-group">
                                     <label className="form-label">Position Hint (Optional)</label>
-                                    <input className="form-input" placeholder="e.g. 'Below the table'" value={editItem.positionHint} onChange={e => setEditItem({ ...editItem, positionHint: e.target.value })} />
+                                    <select className="form-input" value={editItem.positionHint} onChange={e => setEditItem({ ...editItem, positionHint: e.target.value })}>
+                                        {POSITION_HINTS.map(hint => (
+                                            <option key={hint} value={hint}>{hint}</option>
+                                        ))}
+                                    </select>
                                 </div>
                             </div>
                             <div className="modal-footer">

@@ -54,7 +54,7 @@ export const ApprovalService = {
                     isNull(approval.assignedUserId),
                     eq(approval.roleRequired, role),
                     isAdmin ? sql`true` : (userBranches.length > 0 ? inArray(document.branch, userBranches) : sql`false`),
-                    role.toLowerCase() === 'hod' && userDepartment ? eq(document.department, userDepartment) : sql`true`
+                    role.toLowerCase() === 'hod' && userDepartment ? sql`COALESCE(${approval.targetDepartment}, ${document.department}) = ${userDepartment}` : sql`true`
                 )
             )
         ];
@@ -250,6 +250,10 @@ export const ApprovalService = {
                                         eq(keywordMapping.role, currentStep.roleRequired),
                                         eq(keywordMapping.subCategory, doc.subCategory),
                                         or(
+                                            eq(keywordMapping.stepOrder, currentStep.stepOrder),
+                                            isNull(keywordMapping.stepOrder)
+                                        ),
+                                        or(
                                             eq(keywordMapping.branch, doc.branch),
                                             eq(keywordMapping.branch, 'All')
                                         )
@@ -265,6 +269,10 @@ export const ApprovalService = {
                                         eq(keywordMapping.category, doc.category),
                                         eq(keywordMapping.role, currentStep.roleRequired),
                                         or(
+                                            eq(keywordMapping.stepOrder, currentStep.stepOrder),
+                                            isNull(keywordMapping.stepOrder)
+                                        ),
+                                        or(
                                             eq(keywordMapping.branch, doc.branch),
                                             eq(keywordMapping.branch, 'All')
                                         )
@@ -277,8 +285,10 @@ export const ApprovalService = {
                             }
                         }
                             
-                        // Prioritize exact branch match, else fallback to 'All'
-                        const kw = kwResults.find(k => k.branch === doc.branch) || kwResults.find(k => k.branch === 'All');
+                        // Prioritize exact stepOrder match, then exact branch match, else fallback to 'All'
+                        const exactStepResults = kwResults.filter(k => k.stepOrder === currentStep.stepOrder);
+                        const candidates = exactStepResults.length > 0 ? exactStepResults : kwResults;
+                        const kw = candidates.find(k => k.branch === doc.branch) || candidates.find(k => k.branch === 'All');
 
                         if (kw) {
                             const trimmedKeyword = kw.keyword.trim();

@@ -21,6 +21,65 @@ export const WorkflowService = {
     },
 
     /**
+     * Resolve exactly which workflow template to use for a document (with fallback logic)
+     */
+    async resolveWorkflowTemplate(category, branch, subCategory = null) {
+        let conditions = [
+            eq(workflow.category, category),
+            eq(workflow.branch, branch)
+        ];
+
+        if (subCategory) {
+            conditions.push(eq(workflow.subCategory, subCategory));
+        } else {
+            conditions.push(isNull(workflow.subCategory));
+        }
+
+        // Try exact match first
+        let [wf] = await db.select().from(workflow).where(and(...conditions)).limit(1);
+
+        // Fallback 1: Default branch "All" with same subCategory
+        if (!wf && branch !== 'All') {
+            let fallbackConditions = [
+                eq(workflow.category, category),
+                eq(workflow.branch, 'All')
+            ];
+            if (subCategory) fallbackConditions.push(eq(workflow.subCategory, subCategory));
+            else fallbackConditions.push(isNull(workflow.subCategory));
+            
+            [wf] = await db.select().from(workflow).where(and(...fallbackConditions)).limit(1);
+        }
+
+        // Fallback 2: Exact branch but NO subCategory (default memo routing)
+        if (!wf && subCategory) {
+            let fallbackNoSub = [
+                eq(workflow.category, category),
+                eq(workflow.branch, branch),
+                isNull(workflow.subCategory)
+            ];
+            [wf] = await db.select().from(workflow).where(and(...fallbackNoSub)).limit(1);
+        }
+
+        // Fallback 3: Branch "All" and NO subCategory
+        if (!wf && branch !== 'All' && subCategory) {
+            [wf] = await db.select().from(workflow).where(and(
+                eq(workflow.category, category),
+                eq(workflow.branch, 'All'),
+                isNull(workflow.subCategory)
+            )).limit(1);
+        }
+
+        if (!wf) return null;
+
+        // Fetch steps
+        const steps = await db.select().from(workflowStep)
+            .where(eq(workflowStep.workflowId, wf.id))
+            .orderBy(workflowStep.stepOrder);
+
+        return { ...wf, steps };
+    },
+
+    /**
      * Create or update a workflow chain
      * Now supports sub_category for more specific workflow routing.
      */
@@ -59,12 +118,21 @@ export const WorkflowService = {
                     workflowId: wf.id,
                     stepOrder: index + 1,
                     roleRequired: step.roleRequired,
-                    isOptional: step.isOptional || false
+                    isOptional: step.isOptional || false,
+                    isDynamicDepartment: step.isDynamicDepartment || false
                 }));
                 await tx.insert(workflowStep).values(stepsToInsert);
             }
 
             return wf;
         });
+    },
+
+    /**
+     * Delete a workflow
+     */
+    async deleteWorkflow(id) {
+        await db.delete(workflow).where(eq(workflow.id, id));
+        return { success: true };
     }
 };

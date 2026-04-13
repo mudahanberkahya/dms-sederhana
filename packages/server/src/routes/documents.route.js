@@ -1,6 +1,7 @@
 import express from 'express';
 import { requireAuth } from '../middleware/auth.js';
 import { DocumentService } from '../services/document.service.js';
+import { WorkflowService } from '../services/workflow.service.js';
 import { db } from '../db/index.js';
 import { userProfile } from '../db/schema.js';
 import { eq } from 'drizzle-orm';
@@ -45,6 +46,22 @@ router.get('/', requireAuth, async (req, res) => {
     } catch (err) {
         console.error("List Documents Error:", err);
         res.status(500).json({ error: "Failed to fetch documents" });
+    }
+});
+
+// GET /api/documents/workflow-preview (Fetch exact workflow steps)
+router.get('/workflow-preview', requireAuth, async (req, res) => {
+    try {
+        const { category, branch, subCategory } = req.query;
+        if (!category || !branch) {
+            return res.status(400).json({ error: "Missing required query parameters: category, branch" });
+        }
+        
+        const wf = await WorkflowService.resolveWorkflowTemplate(category, branch, subCategory);
+        res.json(wf || { steps: [] });
+    } catch (err) {
+        console.error("Workflow Preview Error:", err);
+        res.status(500).json({ error: "Failed to resolve workflow preview" });
     }
 });
 
@@ -116,6 +133,16 @@ router.get('/:id/file', requireAuth, async (req, res) => {
 router.post('/', requireAuth, upload.single('documentFile'), async (req, res) => {
     try {
         const { title, category, branch, department, notes, subCategory } = req.body;
+        
+        // Parse dynamicDepartments if provided (multipart/form-data could send it as a JSON string)
+        let dynamicDepartments = [];
+        try {
+            if (req.body.dynamicDepartments) {
+                dynamicDepartments = JSON.parse(req.body.dynamicDepartments);
+            }
+        } catch (err) {
+            console.warn("Failed to parse dynamicDepartments", err);
+        }
 
         if (!req.file) {
             return res.status(400).json({ error: "No PDF file uploaded" });
@@ -146,7 +173,8 @@ router.post('/', requireAuth, upload.single('documentFile'), async (req, res) =>
             notes: notes || null,
             filePath: req.file.path,
             originalName: req.file.originalname,
-            uploadedBy: req.user.id
+            uploadedBy: req.user.id,
+            dynamicDepartments
         };
 
         const newDoc = await DocumentService.createDocument(data);

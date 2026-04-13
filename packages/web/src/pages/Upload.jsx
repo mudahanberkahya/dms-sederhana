@@ -27,6 +27,8 @@ export default function Upload() {
     const [notes, setNotes] = useState('');
     const [isUploading, setIsUploading] = useState(false);
     const [error, setError] = useState('');
+    const [workflowPreview, setWorkflowPreview] = useState(null);
+    const [dynamicDepts, setDynamicDepts] = useState({});
 
     // Fetch sub-categories when category changes
     useEffect(() => {
@@ -43,8 +45,33 @@ export default function Upload() {
         }
     }, [category]);
 
+    // Fetch workflow preview when classification options change
+    useEffect(() => {
+        if (category && branch) {
+            api.documents.previewWorkflow(category, branch, subCategory)
+                .then(data => {
+                    setWorkflowPreview(data);
+                    setDynamicDepts({});
+                })
+                .catch(console.error);
+        } else {
+            setWorkflowPreview(null);
+        }
+    }, [category, branch, subCategory]);
+
     const next = () => {
+        if (currentStep === 1) {
+            // Validate dynamic departments
+            const reqSteps = workflowPreview?.steps?.filter(s => s.isDynamicDepartment) || [];
+            for (const s of reqSteps) {
+                if (!dynamicDepts[s.stepOrder]) {
+                    setError(`Please select a target department for Step ${s.stepOrder}`);
+                    return;
+                }
+            }
+        }
         if (currentStep < 2) setCurrentStep(currentStep + 1);
+        setError('');
     };
     const prev = () => {
         if (currentStep > 0) setCurrentStep(currentStep - 1);
@@ -64,6 +91,11 @@ export default function Upload() {
             formData.append('department', department);
             if (subCategory) formData.append('subCategory', subCategory);
             if (notes) formData.append('notes', notes);
+            
+            if (Object.keys(dynamicDepts).length > 0) {
+                const mapArr = Object.keys(dynamicDepts).map(order => ({ stepOrder: parseInt(order), department: dynamicDepts[order] }));
+                formData.append('dynamicDepartments', JSON.stringify(mapArr));
+            }
 
             await api.documents.upload(formData);
             navigate('/documents');
@@ -225,6 +257,32 @@ export default function Upload() {
                                 onChange={(e) => setNotes(e.target.value)}
                             />
                         </div>
+
+                        {workflowPreview?.steps?.some(s => s.isDynamicDepartment) && (
+                            <div className="form-group" style={{ marginTop: '1.5rem', padding: '1rem', background: 'var(--bg-card-hover)', borderRadius: '8px', border: '1px solid var(--border-color)' }}>
+                                <h4 style={{ marginBottom: '12px', fontSize: '0.95rem' }}>Dynamic Routing Requirements</h4>
+                                <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginBottom: '12px' }}>
+                                    The selected workflow requires you to specify the target department for certain approval steps.
+                                </p>
+                                {workflowPreview.steps.filter(s => s.isDynamicDepartment).map(step => (
+                                    <div key={step.id} style={{ marginBottom: '10px' }}>
+                                        <label className="form-label" style={{ fontSize: '0.85rem' }}>
+                                            Step {step.stepOrder} ({(step.roleRequired || '').replace(/_/g, ' ').toUpperCase()}) *
+                                        </label>
+                                        <select 
+                                            className="form-select" 
+                                            value={dynamicDepts[step.stepOrder] || ''} 
+                                            onChange={(e) => setDynamicDepts(prev => ({ ...prev, [step.stepOrder]: e.target.value }))}
+                                        >
+                                            <option value="">— Select Target Department —</option>
+                                            {departments?.map(d => (
+                                                <option key={d.id} value={d.id}>{d.name}</option>
+                                            ))}
+                                        </select>
+                                    </div>
+                                ))}
+                            </div>
+                        )}
                     </div>
                 )}
 
@@ -259,6 +317,18 @@ export default function Upload() {
                                 <div className="review-item">
                                     <span className="info-label">Notes</span>
                                     <span className="info-value">{notes}</span>
+                                </div>
+                            )}
+                            {Object.keys(dynamicDepts).length > 0 && (
+                                <div className="review-item" style={{ gridColumn: '1 / -1' }}>
+                                    <span className="info-label">Dynamic Routings</span>
+                                    <div style={{ marginTop: '8px' }}>
+                                        {Object.entries(dynamicDepts).map(([order, dept]) => (
+                                            <div key={order} style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>
+                                                • Step {order}: <strong style={{ color: 'var(--text-primary)' }}>{dept}</strong>
+                                            </div>
+                                        ))}
+                                    </div>
                                 </div>
                             )}
                         </div>

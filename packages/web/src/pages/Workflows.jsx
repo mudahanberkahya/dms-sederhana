@@ -107,6 +107,12 @@ export default function Workflows() {
         setEditSteps(newSteps);
     };
 
+    const handleStepDynamicDeptChange = (index, checked) => {
+        const newSteps = [...editSteps];
+        newSteps[index].isDynamicDepartment = checked;
+        setEditSteps(newSteps);
+    };
+
     const handleSave = async () => {
         if (!editSteps || editSteps.length === 0) {
             alert("At least one approval step is required");
@@ -139,6 +145,22 @@ export default function Workflows() {
         setEditSteps([]);
     };
 
+    const handleDeleteWorkflow = async () => {
+        if (!selectedWorkflow) return;
+        if (!confirm(`Are you sure you want to delete this workflow? This will erase the sub-category "${selectedSubCategory}" from this branch.`)) return;
+        setSaving(true);
+        try {
+            await api.admin.workflows.delete(selectedWorkflow.id);
+            setSelectedSubCategory('');
+            await fetchWorkflows(); // Refresh data
+            alert("Deleted workflow successfully");
+        } catch (err) {
+            alert("Failed to delete workflow: " + err.message);
+        } finally {
+            setSaving(false);
+        }
+    };
+
     // Determine display label for the card title
     const categoryLabel = categories.find(c => c.id === selectedCategoryId)?.name || selectedCategoryId;
 
@@ -155,22 +177,32 @@ export default function Workflows() {
         <div className="workflow-edit-container" style={{ background: 'var(--bg-elevated)', padding: '16px', borderRadius: 'var(--radius-md)' }}>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
                 {editSteps.map((step, index) => (
-                    <div key={index} style={{ display: 'flex', alignItems: 'center', gap: '12px', background: 'var(--bg-surface)', padding: '12px', borderRadius: 'var(--radius-sm)', border: '1px solid var(--border-color)' }}>
-                        <div style={{ fontWeight: 600, color: 'var(--text-muted)', width: '60px' }}>Step {index + 1}</div>
-                        <select
-                            className="form-input"
-                            value={step.roleRequired}
-                            onChange={(e) => handleStepRoleChange(index, e.target.value)}
-                            style={{ flex: 1 }}
-                        >
-                            <option value="" disabled>Select a role...</option>
-                            {roles.map(r => (
-                                <option key={r.id} value={r.id}>{r.name.toUpperCase()}</option>
-                            ))}
-                        </select>
-                        <button className="btn-icon danger" onClick={() => handleRemoveStep(index)} title="Remove Step">
-                            <Trash2 size={16} color="var(--accent-coral)" />
-                        </button>
+                    <div key={index} style={{ display: 'flex', flexDirection: 'column', gap: '8px', background: 'var(--bg-surface)', padding: '12px', borderRadius: 'var(--radius-sm)', border: '1px solid var(--border-color)' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                            <div style={{ fontWeight: 600, color: 'var(--text-muted)', width: '60px' }}>Step {index + 1}</div>
+                            <select
+                                className="form-input"
+                                value={step.roleRequired}
+                                onChange={(e) => handleStepRoleChange(index, e.target.value)}
+                                style={{ flex: 1 }}
+                            >
+                                <option value="" disabled>Select a role...</option>
+                                {roles.map(r => (
+                                    <option key={r.id} value={r.id}>{r.name.toUpperCase()}</option>
+                                ))}
+                            </select>
+                            <button className="btn-icon danger" onClick={() => handleRemoveStep(index)} title="Remove Step">
+                                <Trash2 size={16} color="var(--accent-coral)" />
+                            </button>
+                        </div>
+                        <label style={{ display: 'flex', alignItems: 'center', gap: '8px', marginLeft: '72px', fontSize: '0.85rem', color: 'var(--text-muted)', cursor: 'pointer' }}>
+                            <input 
+                                type="checkbox" 
+                                checked={step.isDynamicDepartment || false}
+                                onChange={(e) => handleStepDynamicDeptChange(index, e.target.checked)}
+                            />
+                            Dynamic Department Selection (User selects department during upload)
+                        </label>
                     </div>
                 ))}
                 {editSteps.length === 0 && (
@@ -291,7 +323,14 @@ export default function Workflows() {
                             </p>
                         </div>
                         {!isEditing ? (
-                            <button className="btn btn-primary btn-sm" onClick={handleEditStart}>Edit Chain</button>
+                            <div style={{ display: 'flex', gap: '8px' }}>
+                                {selectedWorkflow && (
+                                    <button className="btn btn-secondary btn-sm" onClick={handleDeleteWorkflow} style={{ color: 'var(--accent-coral)', borderColor: 'var(--accent-coral)' }}>
+                                        <Trash2 size={14} /> Delete
+                                    </button>
+                                )}
+                                <button className="btn btn-primary btn-sm" onClick={handleEditStart}>Edit Chain</button>
+                            </div>
                         ) : editSaveButtons}
                     </div>
 

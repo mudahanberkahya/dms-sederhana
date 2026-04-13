@@ -127,6 +127,7 @@ export const workflowStep = pgTable("workflow_step", {
     stepOrder: integer("step_order").notNull(),
     roleRequired: varchar("role_required", { length: 100 }).notNull(), // Cost Control, Financial Controller, etc
     isOptional: boolean("is_optional").default(false).notNull(),
+    isDynamicDepartment: boolean("is_dynamic_department").default(false).notNull(),
 });
 
 export const approval = pgTable("approval", {
@@ -134,6 +135,7 @@ export const approval = pgTable("approval", {
     documentId: uuid("document_id").notNull().references(() => document.id, { onDelete: 'cascade' }),
     stepOrder: integer("step_order").notNull(),
     roleRequired: varchar("role_required", { length: 100 }).notNull(),
+    targetDepartment: varchar("target_department", { length: 100 }), // The dynamic department routed for this step
     assignedUserId: text("assigned_user_id").references(() => user.id, { onDelete: 'set null' }), // nullable if assigned generally by role
     status: varchar("status", { length: 50 }).default('PENDING').notNull(), // PENDING, APPROVED, REJECTED
     comment: text("comment"),
@@ -150,6 +152,7 @@ export const keywordMapping = pgTable("keyword_mapping", {
     subCategory: varchar("sub_category", { length: 100 }), // e.g., Cluster Memo, Internal Memo
     branch: varchar("branch", { length: 255 }).notNull().default('All'),
     role: varchar("role", { length: 100 }).notNull(),
+    stepOrder: integer("step_order"), // Added to resolve HOD collisions
     keyword: text("keyword").notNull(),
     offset_x: integer("offset_x").default(0).notNull(),
     offset_y: integer("offset_y").default(0).notNull(),

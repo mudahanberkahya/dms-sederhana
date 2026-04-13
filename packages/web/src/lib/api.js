@@ -62,6 +62,11 @@ export const api = {
             return fetchApi(`/documents${qs ? '?' + qs : ''}`);
         },
         get: (id) => fetchApi(`/documents/${id}`),
+        previewWorkflow: (category, branch, subCategory) => {
+            const query = new URLSearchParams({ category, branch });
+            if (subCategory) query.set('subCategory', subCategory);
+            return fetchApi(`/documents/workflow-preview?${query.toString()}`);
+        },
         upload: (formData) => fetch(`${API_BASE_URL}/documents`, {
             method: 'POST',
             body: formData,
@@ -125,6 +130,9 @@ export const api = {
             save: (payload) => fetchApi('/admin/workflows', {
                 method: 'POST',
                 body: JSON.stringify(payload)
+            }),
+            delete: (id) => fetchApi(`/admin/workflows/${id}`, {
+                method: 'DELETE'
             })
         },
         signatures: {

@@ -37,4 +37,14 @@ router.post('/', requireAuth, requireRole('admin'), async (req, res) => {
     }
 });
 
+router.delete('/:id', requireAuth, requireRole('admin'), async (req, res) => {
+    try {
+        await WorkflowService.deleteWorkflow(req.params.id);
+        res.json({ message: "Workflow deleted successfully" });
+    } catch (err) {
+        console.error("Delete Workflow Error:", err);
+        res.status(500).json({ error: "Failed to delete workflow" });
+    }
+});
+
 export default router;

@@ -19,7 +19,7 @@ router.get('/', requireAuth, requireRole('admin'), async (req, res) => {
 
 router.post('/', requireAuth, requireRole('admin'), async (req, res) => {
     try {
-        const { category, sub_category, branch, role, keyword, offset_x, offset_y, positionHint } = req.body;
+        const { category, sub_category, branch, role, keyword, offset_x, offset_y, positionHint, step_order } = req.body;
 
         if (!category || !role || !keyword) {
             return res.status(400).json({ error: "Missing required fields" });
@@ -33,7 +33,8 @@ router.post('/', requireAuth, requireRole('admin'), async (req, res) => {
             keyword, 
             offset_x: offset_x || 0, 
             offset_y: offset_y || 0, 
-            positionHint 
+            positionHint,
+            step_order: step_order ? parseInt(step_order) : null
         });
         res.status(201).json(newMapping);
     } catch (err) {
@@ -44,7 +45,7 @@ router.post('/', requireAuth, requireRole('admin'), async (req, res) => {
 
 router.put('/:id', requireAuth, requireRole('admin'), async (req, res) => {
     try {
-        const { category, sub_category, branch, role, keyword, offset_x, offset_y, positionHint } = req.body;
+        const { category, sub_category, branch, role, keyword, offset_x, offset_y, positionHint, step_order } = req.body;
 
         if (!category || !role || !keyword) {
             return res.status(400).json({ error: "Missing required fields" });
@@ -58,7 +59,8 @@ router.put('/:id', requireAuth, requireRole('admin'), async (req, res) => {
             keyword, 
             offset_x: offset_x || 0, 
             offset_y: offset_y || 0, 
-            positionHint 
+            positionHint,
+            step_order: step_order ? parseInt(step_order) : null
         });
         
         if (!updatedMapping) {
