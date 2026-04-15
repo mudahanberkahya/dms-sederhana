@@ -303,18 +303,6 @@
 
 .modal-header {
     flex-shrink: 0;
-}
-
-.modal-body {
-    overflow-y: auto;
-    padding: 20px 24px;
-}
-
-.modal-footer {
-    flex-shrink: 0;
-}
-
-.modal-header {
     display: flex;
     align-items: center;
     justify-content: space-between;
@@ -327,10 +315,13 @@
 }
 
 .modal-body {
+    overflow-y: auto;
     padding: 20px 24px;
+    flex: 1 1 auto;
 }
 
 .modal-footer {
+    flex-shrink: 0;
     display: flex;
     gap: 10px;
     justify-content: flex-end;

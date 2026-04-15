@@ -43,7 +43,7 @@ export default function Keywords() {
         keyword: '',
         offset_x: 0,
         offset_y: 0,
-        positionHint: 'Below Signature Line',
+        positionHint: 'Above Signature Line',
         step_order: ''
     });
 
@@ -54,17 +54,29 @@ export default function Keywords() {
     // Edit Modal State
     const [editItem, setEditItem] = useState(null);
     const [editing, setEditing] = useState(false);
+    const [editCategoryWorkflows, setEditCategoryWorkflows] = useState([]);
 
-    // Fetch workflows when newMapping or editItem category changes
+    // Fetch workflows for Add modal when category changes
     useEffect(() => {
-        const catId = newMapping.category || editItem?.category;
-        if (!catId) return;
-        api.admin.workflows.get(catId)
+        if (!newMapping.category) return;
+        api.admin.workflows.get(newMapping.category)
             .then(data => setCategoryWorkflows(data))
             .catch(console.error);
-    }, [newMapping.category, editItem?.category]);
+    }, [newMapping.category]);
+
+    // Fetch workflows for Edit modal when editItem changes or its category changes
+    useEffect(() => {
+        if (!editItem?.category) {
+            setEditCategoryWorkflows([]);
+            return;
+        }
+        api.admin.workflows.get(editItem.category)
+            .then(data => setEditCategoryWorkflows(data))
+            .catch(console.error);
+    }, [editItem?.category, editItem?.id]);
 
     const activeSubCategories = [...new Set(categoryWorkflows.filter(w => w.subCategory).map(w => w.subCategory))];
+    const editActiveSubCategories = [...new Set(editCategoryWorkflows.filter(w => w.subCategory).map(w => w.subCategory))];
 
     const fetchKeywords = async () => {
         try {
@@ -100,7 +112,7 @@ export default function Keywords() {
                 step_order: newMapping.step_order ? parseInt(newMapping.step_order) : null
             });
             setShowAddModal(false);
-            setNewMapping({ category: categories[0]?.id || '', sub_category: '', branch: 'Astara Hotel', role: roles[0]?.id || '', keyword: '', offset_x: 0, offset_y: 0, positionHint: 'Below Signature Line', step_order: '' });
+            setNewMapping({ category: categories[0]?.id || '', sub_category: '', branch: 'Astara Hotel', role: roles[0]?.id || '', keyword: '', offset_x: 0, offset_y: 0, positionHint: 'Above Signature Line', step_order: '' });
             await fetchKeywords();
         } catch (err) {
             alert("Failed to add keyword mapping: " + err.message);
@@ -186,7 +198,7 @@ export default function Keywords() {
                                     <td className="text-muted text-sm mono">X:{row.offset_x || 0} Y:{row.offset_y || 0}</td>
                                     <td className="text-muted text-sm" style={{ fontSize: '0.85rem' }}>{row.positionHint || 'Auto-placed using keyword search'}</td>
                                     <td style={{ textAlign: 'right' }}>
-                                        <button className="btn-icon" onClick={() => setEditItem({...row})} title="Edit Mapping" style={{ marginRight: '8px' }}>
+                                        <button className="btn-icon" onClick={() => setEditItem({...row, sub_category: row.subCategory || row.sub_category || '', offset_x: row.offset_x ?? 0, offset_y: row.offset_y ?? 0, positionHint: row.positionHint || 'Above Signature Line', step_order: row.stepOrder || row.step_order || ''})} title="Edit Mapping" style={{ marginRight: '8px' }}>
                                             <Edit2 size={16} />
                                         </button>
                                         <button className="btn-icon danger" onClick={() => setDeleteItem(row)} title="Delete Mapping">
@@ -334,7 +346,7 @@ export default function Keywords() {
                                     <label className="form-label">Sub-Category (Optional)</label>
                                     <select className="form-input" value={editItem.sub_category || editItem.subCategory || ''} onChange={e => setEditItem({ ...editItem, sub_category: e.target.value, subCategory: e.target.value })}>
                                         <option value="">Default (No Sub-Category)</option>
-                                        {activeSubCategories.map(sc => (
+                                        {editActiveSubCategories.map(sc => (
                                             <option key={sc} value={sc}>{sc}</option>
                                         ))}
                                     </select>

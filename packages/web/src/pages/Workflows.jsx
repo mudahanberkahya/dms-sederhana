@@ -1,8 +1,18 @@
 import { useState, useEffect, useContext } from 'react';
-import { ArrowRight, Plus, Loader2, Save, X, Trash2 } from 'lucide-react';
+import { ArrowRight, Plus, Loader2, Save, X, Trash2, Edit2, ChevronDown, ChevronUp } from 'lucide-react';
 import { api } from '../lib/api';
 import { AppContext } from '../App';
 import './Admin.css';
+
+// Predefined Position Hints (same as Keywords page)
+const POSITION_HINTS = [
+    "Above Signature Line",
+    "Below Signature Line",
+    "Left",
+    "Right",
+    "Center",
+    "Auto-placed using keyword search"
+];
 
 export default function Workflows() {
     const { categories, roles } = useContext(AppContext);
@@ -12,6 +22,7 @@ export default function Workflows() {
     const [selectedBranch, setSelectedBranch] = useState('Astara Hotel');
     const [selectedSubCategory, setSelectedSubCategory] = useState('');
     const [loading, setLoading] = useState(true);
+    const [newSubCatInput, setNewSubCatInput] = useState('');
 
     // Edit State
     const [isEditing, setIsEditing] = useState(false);
@@ -113,6 +124,28 @@ export default function Workflows() {
         setEditSteps(newSteps);
     };
 
+    const handleStepKeywordConfigChange = (index, field, value) => {
+        const newSteps = [...editSteps];
+        if (!newSteps[index].keywordConfig) {
+            newSteps[index].keywordConfig = { keyword: '', positionHint: 'Above Signature Line', offset_x: 0, offset_y: 0 };
+        }
+        newSteps[index].keywordConfig[field] = value;
+        setEditSteps(newSteps);
+    };
+
+    const toggleStepKeywordConfig = (index) => {
+        const newSteps = [...editSteps];
+        if (!newSteps[index].showKeywordConfig) {
+            newSteps[index].showKeywordConfig = true;
+            if (!newSteps[index].keywordConfig) {
+                newSteps[index].keywordConfig = { keyword: '', positionHint: 'Above Signature Line', offset_x: 0, offset_y: 0 };
+            }
+        } else {
+            newSteps[index].showKeywordConfig = false;
+        }
+        setEditSteps(newSteps);
+    };
+
     const handleSave = async () => {
         if (!editSteps || editSteps.length === 0) {
             alert("At least one approval step is required");
@@ -130,9 +163,32 @@ export default function Workflows() {
                 subCategory: selectedSubCategory || null,
                 steps: editSteps
             });
+
+            // Auto-POST keyword mappings for steps that have keyword config filled
+            const keywordPromises = editSteps
+                .filter(step => step.keywordConfig && step.keywordConfig.keyword && step.keywordConfig.keyword.trim())
+                .map((step, index) => {
+                    return api.admin.keywords.add({
+                        category: selectedCategoryId,
+                        sub_category: selectedSubCategory || null,
+                        branch: selectedBranch,
+                        role: step.roleRequired,
+                        step_order: index + 1,
+                        keyword: step.keywordConfig.keyword.trim(),
+                        positionHint: step.keywordConfig.positionHint || 'Above Signature Line',
+                        offset_x: parseInt(step.keywordConfig.offset_x) || 0,
+                        offset_y: parseInt(step.keywordConfig.offset_y) || 0
+                    });
+                });
+
+            if (keywordPromises.length > 0) {
+                await Promise.all(keywordPromises);
+            }
+
             setIsEditing(false);
-            await fetchWorkflows(); // Refresh data
-            alert("Saved workflow successfully");
+            await fetchWorkflows();
+            const kwMsg = keywordPromises.length > 0 ? ` (${keywordPromises.length} keyword mapping(s) also created)` : '';
+            alert(`Saved workflow successfully${kwMsg}`);
         } catch (err) {
             alert("Failed to save workflow: " + err.message);
         } finally {
@@ -156,6 +212,83 @@ export default function Workflows() {
             alert("Deleted workflow successfully");
         } catch (err) {
             alert("Failed to delete workflow: " + err.message);
+        } finally {
+            setSaving(false);
+        }
+    };
+
+    // --- Sub-Category Management Handlers ---
+    const handleAddSubCategory = () => {
+        const val = newSubCatInput.trim();
+        if (!val) return;
+        setSelectedSubCategory(val);
+        setNewSubCatInput('');
+    };
+
+    const handleRenameSubCategory = async (oldName) => {
+        const newName = prompt(`Rename sub-category "${oldName}" to:`, oldName);
+        if (!newName || newName.trim() === '' || newName.trim() === oldName) return;
+        const trimmedName = newName.trim();
+
+        // Find all workflows with this sub-category for current category
+        const affectedWorkflows = workflows.filter(
+            w => w.category === selectedCategoryId && w.subCategory === oldName
+        );
+
+        if (affectedWorkflows.length === 0) {
+            setSelectedSubCategory(trimmedName);
+            return;
+        }
+
+        setSaving(true);
+        try {
+            // For each affected workflow: save a copy with the new sub-category name, then delete the old one
+            for (const wf of affectedWorkflows) {
+                // Save with new name
+                await api.admin.workflows.save({
+                    category: wf.category,
+                    branch: wf.branch,
+                    subCategory: trimmedName,
+                    steps: wf.steps.map(s => ({
+                        roleRequired: s.roleRequired,
+                        isOptional: s.isOptional || false,
+                        isDynamicDepartment: s.isDynamicDepartment || false
+                    }))
+                });
+                // Delete old workflow (only if it has a real UUID id)
+                if (wf.id && !wf.id.includes('-') === false) {
+                    await api.admin.workflows.delete(wf.id);
+                }
+                // Safer: just try delete, ignore if fails on generated IDs
+                try { await api.admin.workflows.delete(wf.id); } catch (_) { /* ignore */ }
+            }
+            setSelectedSubCategory(trimmedName);
+            await fetchWorkflows();
+            alert(`Sub-category renamed to "${trimmedName}" successfully`);
+        } catch (err) {
+            alert("Failed to rename sub-category: " + err.message);
+        } finally {
+            setSaving(false);
+        }
+    };
+
+    const handleDeleteSubCategory = async (scName) => {
+        if (!confirm(`Delete sub-category "${scName}" and ALL its workflows across all branches? This cannot be undone.`)) return;
+
+        const affectedWorkflows = workflows.filter(
+            w => w.category === selectedCategoryId && w.subCategory === scName
+        );
+
+        setSaving(true);
+        try {
+            for (const wf of affectedWorkflows) {
+                try { await api.admin.workflows.delete(wf.id); } catch (_) { /* ignore generated IDs */ }
+            }
+            if (selectedSubCategory === scName) setSelectedSubCategory('');
+            await fetchWorkflows();
+            alert(`Sub-category "${scName}" deleted successfully`);
+        } catch (err) {
+            alert("Failed to delete sub-category: " + err.message);
         } finally {
             setSaving(false);
         }
@@ -203,6 +336,40 @@ export default function Workflows() {
                             />
                             Dynamic Department Selection (User selects department during upload)
                         </label>
+                        {/* Signature Keyword Configuration Accordion */}
+                        <button
+                            type="button"
+                            onClick={() => toggleStepKeywordConfig(index)}
+                            style={{ display: 'flex', alignItems: 'center', gap: '6px', marginLeft: '72px', fontSize: '0.8rem', color: 'var(--accent-teal)', background: 'none', border: 'none', cursor: 'pointer', padding: '4px 0' }}
+                        >
+                            {step.showKeywordConfig ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
+                            Signature Keyword Configuration (Optional)
+                        </button>
+                        {step.showKeywordConfig && (
+                            <div style={{ marginLeft: '72px', padding: '12px', background: 'var(--bg-elevated)', borderRadius: 'var(--radius-sm)', border: '1px dashed var(--border-color)', display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                                <p className="text-muted" style={{ fontSize: '0.75rem', margin: 0 }}>Configure the keyword for automatic signature placement. This will be saved to the Keywords table.</p>
+                                <div className="form-group" style={{ marginBottom: 0 }}>
+                                    <label className="form-label" style={{ fontSize: '0.78rem' }}>Keyword Text in PDF</label>
+                                    <input className="form-input" placeholder="e.g. 'Approved by Hotel Manager'" value={step.keywordConfig?.keyword || ''} onChange={e => handleStepKeywordConfigChange(index, 'keyword', e.target.value)} style={{ fontSize: '0.82rem' }} />
+                                </div>
+                                <div className="form-group" style={{ marginBottom: 0 }}>
+                                    <label className="form-label" style={{ fontSize: '0.78rem' }}>Position Hint</label>
+                                    <select className="form-input" value={step.keywordConfig?.positionHint || 'Above Signature Line'} onChange={e => handleStepKeywordConfigChange(index, 'positionHint', e.target.value)} style={{ fontSize: '0.82rem' }}>
+                                        {POSITION_HINTS.map(hint => <option key={hint} value={hint}>{hint}</option>)}
+                                    </select>
+                                </div>
+                                <div style={{ display: 'flex', gap: '10px' }}>
+                                    <div className="form-group" style={{ flex: 1, marginBottom: 0 }}>
+                                        <label className="form-label" style={{ fontSize: '0.78rem' }}>X Offset (px)</label>
+                                        <input type="number" className="form-input" value={step.keywordConfig?.offset_x ?? 0} onChange={e => handleStepKeywordConfigChange(index, 'offset_x', e.target.value)} style={{ fontSize: '0.82rem' }} />
+                                    </div>
+                                    <div className="form-group" style={{ flex: 1, marginBottom: 0 }}>
+                                        <label className="form-label" style={{ fontSize: '0.78rem' }}>Y Offset (px)</label>
+                                        <input type="number" className="form-input" value={step.keywordConfig?.offset_y ?? 0} onChange={e => handleStepKeywordConfigChange(index, 'offset_y', e.target.value)} style={{ fontSize: '0.82rem' }} />
+                                    </div>
+                                </div>
+                            </div>
+                        )}
                     </div>
                 ))}
                 {editSteps.length === 0 && (
@@ -270,7 +437,7 @@ export default function Workflows() {
                 </div>
             </div>
 
-            {/* Sub-Category Selector */}
+            {/* Sub-Category Selector with Add/Edit/Delete */}
             <div style={{ marginBottom: 20, display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap' }}>
                 <span className="text-muted" style={{ fontSize: '0.85rem' }}>Sub-Category:</span>
                 <button
@@ -282,29 +449,59 @@ export default function Workflows() {
                     Default (No Sub-Category)
                 </button>
                 {availableSubCategories.map(sc => (
-                    <button
-                        key={sc}
-                        className={`filter-chip ${selectedSubCategory === sc ? 'active' : ''}`}
-                        onClick={() => { if (!isEditing) setSelectedSubCategory(sc); }}
-                        disabled={isEditing}
-                        style={{ fontSize: '0.82rem' }}
-                    >
-                        {sc}
-                    </button>
+                    <div key={sc} style={{ display: 'inline-flex', alignItems: 'center', gap: '2px' }}>
+                        <button
+                            className={`filter-chip ${selectedSubCategory === sc ? 'active' : ''}`}
+                            onClick={() => { if (!isEditing) setSelectedSubCategory(sc); }}
+                            disabled={isEditing}
+                            style={{ fontSize: '0.82rem', borderTopRightRadius: 0, borderBottomRightRadius: 0, paddingRight: '6px' }}
+                        >
+                            {sc}
+                        </button>
+                        {!isEditing && (
+                            <span style={{ display: 'inline-flex', alignItems: 'center', gap: '1px', background: 'var(--bg-elevated)', border: '1px solid var(--border-color)', borderLeft: 'none', borderRadius: '0 var(--radius-pill) var(--radius-pill) 0', padding: '3px 4px' }}>
+                                <button
+                                    className="btn-icon"
+                                    onClick={() => handleRenameSubCategory(sc)}
+                                    title={`Rename "${sc}"`}
+                                    style={{ padding: '2px', width: '20px', height: '20px' }}
+                                >
+                                    <Edit2 size={11} />
+                                </button>
+                                <button
+                                    className="btn-icon danger"
+                                    onClick={() => handleDeleteSubCategory(sc)}
+                                    title={`Delete "${sc}"`}
+                                    style={{ padding: '2px', width: '20px', height: '20px' }}
+                                >
+                                    <Trash2 size={11} color="var(--accent-coral)" />
+                                </button>
+                            </span>
+                        )}
+                    </div>
                 ))}
                 {!isEditing && (
-                    <input
-                        type="text"
-                        className="form-input"
-                        placeholder="New sub-category..."
-                        style={{ width: '180px', padding: '0.25rem 0.5rem', fontSize: '0.82rem' }}
-                        onKeyDown={(e) => {
-                            if (e.key === 'Enter' && e.target.value.trim()) {
-                                setSelectedSubCategory(e.target.value.trim());
-                                e.target.value = '';
-                            }
-                        }}
-                    />
+                    <div style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+                        <input
+                            type="text"
+                            className="form-input"
+                            placeholder="New sub-category..."
+                            style={{ width: '170px', padding: '0.25rem 0.5rem', fontSize: '0.82rem' }}
+                            value={newSubCatInput}
+                            onChange={(e) => setNewSubCatInput(e.target.value)}
+                            onKeyDown={(e) => {
+                                if (e.key === 'Enter') handleAddSubCategory();
+                            }}
+                        />
+                        <button
+                            className="btn btn-primary btn-sm"
+                            onClick={handleAddSubCategory}
+                            disabled={!newSubCatInput.trim()}
+                            style={{ padding: '4px 10px', fontSize: '0.78rem', whiteSpace: 'nowrap' }}
+                        >
+                            <Plus size={12} /> Add
+                        </button>
+                    </div>
                 )}
             </div>
 
@@ -386,4 +583,3 @@ export default function Workflows() {
         </div>
     );
 }
-

@@ -261,13 +261,14 @@ export const ApprovalService = {
                                 );
                         }
                         
-                        // Fallback: keyword mappings without sub_category
+                        // Fallback: keyword mappings explicitly with NULL sub_category
                         if (kwResults.length === 0) {
                             kwResults = await tx.select().from(keywordMapping)
                                 .where(
                                     and(
                                         eq(keywordMapping.category, doc.category),
                                         eq(keywordMapping.role, currentStep.roleRequired),
+                                        isNull(keywordMapping.subCategory),
                                         or(
                                             eq(keywordMapping.stepOrder, currentStep.stepOrder),
                                             isNull(keywordMapping.stepOrder)
@@ -278,11 +279,6 @@ export const ApprovalService = {
                                         )
                                     )
                                 );
-                            // Further filter: prefer null sub_category fallback
-                            const nullSubCat = kwResults.filter(k => !k.subCategory);
-                            if (nullSubCat.length > 0) {
-                                kwResults = nullSubCat;
-                            }
                         }
                             
                         // Prioritize exact stepOrder match, then exact branch match, else fallback to 'All'
