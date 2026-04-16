@@ -24,9 +24,9 @@
 .filter-chip {
     padding: 6px 16px;
     border-radius: var(--radius-pill);
-    background: var(--bg-elevated);
-    border: 1px solid var(--border-color);
-    color: var(--text-secondary);
+    background: var(--surface-container);
+    border: none;
+    color: var(--on-surface-variant);
     font-size: 0.82rem;
     font-weight: 500;
     cursor: pointer;
@@ -34,14 +34,13 @@
 }
 
 .filter-chip:hover {
-    border-color: var(--accent-gold);
-    color: var(--text-primary);
+    background: var(--surface-hover);
+    color: var(--on-surface);
 }
 
 .filter-chip.active {
-    background: var(--accent-gold-subtle);
-    border-color: var(--accent-gold);
-    color: var(--accent-gold);
+    background: var(--accent-primary-subtle);
+    color: var(--accent-primary);
 }
 
 .toolbar-right {
@@ -58,7 +57,7 @@
 
 .view-toggles {
     display: flex;
-    background: var(--bg-elevated);
+    background: var(--surface-container);
     border-radius: var(--radius-md);
     padding: 2px;
 }
@@ -68,8 +67,8 @@
 }
 
 .view-toggles .btn-icon.active {
-    background: var(--accent-gold-subtle);
-    color: var(--accent-gold);
+    background: var(--accent-primary-subtle);
+    color: var(--accent-primary);
 }
 
 /* ==================== TABLE CARD ==================== */
@@ -103,12 +102,12 @@
 
 .doc-card:hover {
     transform: translateY(-2px);
-    box-shadow: var(--shadow-lg);
+    box-shadow: var(--shadow-md);
 }
 
 .doc-card-preview {
     height: 100px;
-    background: linear-gradient(135deg, var(--bg-elevated), var(--bg-hover));
+    background: linear-gradient(135deg, var(--surface-container), var(--surface-hover));
     display: flex;
     align-items: center;
     justify-content: center;
@@ -123,7 +122,7 @@
     font-size: 0.9rem;
     font-weight: 600;
     margin: 8px 0 4px;
-    color: var(--text-primary);
+    color: var(--on-surface);
     line-height: 1.3;
 }
 
@@ -175,8 +174,8 @@
     height: 32px;
     border-radius: var(--radius-md);
     border: none;
-    background: var(--bg-elevated);
-    color: var(--text-secondary);
+    background: var(--surface-container);
+    color: var(--on-surface-variant);
     font-size: 0.82rem;
     font-weight: 500;
     cursor: pointer;
@@ -187,7 +186,7 @@
 }
 
 .pagination-page.active {
-    background: var(--accent-gold);
+    background: linear-gradient(135deg, #3525cd, #4f46e5);
     color: var(--text-inverse);
 }
 

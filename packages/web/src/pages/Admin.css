@@ -51,7 +51,7 @@
     width: 32px;
     height: 32px;
     border-radius: 50%;
-    background: linear-gradient(135deg, var(--accent-gold), var(--accent-teal));
+    background: linear-gradient(135deg, #3525cd, #4f46e5);
     display: flex;
     align-items: center;
     justify-content: center;
@@ -69,6 +69,7 @@
 .user-cell-name {
     font-weight: 500;
     font-size: 0.88rem;
+    color: var(--on-surface);
 }
 
 .user-cell-email {
@@ -82,6 +83,7 @@
     align-items: center;
     gap: 6px;
     font-size: 0.82rem;
+    color: var(--on-surface-variant);
 }
 
 .status-dot::before {
@@ -92,7 +94,7 @@
 }
 
 .status-dot.active::before {
-    background: var(--status-approved);
+    background: #15803d;
 }
 
 .status-dot.inactive::before {
@@ -100,7 +102,7 @@
 }
 
 .status-dot.absent::before {
-    background: var(--status-pending);
+    background: #b45309;
 }
 
 /* Role tag */
@@ -111,9 +113,9 @@
     font-size: 0.72rem;
     font-weight: 600;
     text-transform: capitalize;
-    background: var(--bg-elevated);
-    color: var(--text-secondary);
-    border: 1px solid var(--border-color);
+    background: var(--surface-container);
+    color: var(--on-surface-variant);
+    border: none;
 }
 
 /* Signature card grid */
@@ -129,20 +131,21 @@
 
 .sig-preview {
     height: 80px;
-    background: var(--bg-elevated);
+    background: var(--surface-container);
     border-radius: var(--radius-md);
     margin-bottom: 12px;
     display: flex;
     align-items: center;
     justify-content: center;
     color: var(--text-muted);
-    border: 1px dashed var(--border-light);
+    border: 1px dashed var(--outline-variant);
 }
 
 .sig-name {
     font-weight: 500;
     font-size: 0.88rem;
     margin-bottom: 2px;
+    color: var(--on-surface);
 }
 
 .sig-role {
@@ -162,8 +165,8 @@
 
 .wf-step {
     padding: 12px 20px;
-    background: var(--bg-elevated);
-    border: 1px solid var(--border-color);
+    background: var(--surface-container);
+    border: none;
     border-radius: var(--radius-md);
     text-align: center;
     min-width: 140px;
@@ -172,7 +175,7 @@
 .wf-step-role {
     font-size: 0.82rem;
     font-weight: 600;
-    color: var(--text-primary);
+    color: var(--on-surface);
 }
 
 .wf-step-label {
@@ -190,8 +193,8 @@
 .keyword-cell {
     font-family: 'JetBrains Mono', monospace;
     font-size: 0.82rem;
-    color: var(--accent-teal);
-    background: var(--accent-teal-subtle);
+    color: var(--accent-primary);
+    background: var(--accent-primary-subtle);
     padding: 2px 8px;
     border-radius: var(--radius-sm);
 }
@@ -215,10 +218,10 @@
     align-items: center;
     gap: 8px;
     padding: 8px 12px;
-    background: var(--bg-elevated);
+    background: var(--surface-container);
     border-radius: var(--radius-md);
     font-size: 0.82rem;
-    color: var(--text-secondary);
+    color: var(--on-surface-variant);
 }
 
 /* Action dropdown menu */
@@ -227,8 +230,8 @@
     right: 0;
     top: 100%;
     min-width: 180px;
-    background: var(--bg-surface);
-    border: 1px solid var(--border-color);
+    background: var(--surface-container-lowest);
+    border: 1px solid var(--outline-variant);
     border-radius: var(--radius-md);
     box-shadow: var(--shadow-lg);
     z-index: 100;
@@ -244,24 +247,24 @@
     padding: 8px 14px;
     border: none;
     background: none;
-    color: var(--text-secondary);
+    color: var(--on-surface-variant);
     font-size: 0.85rem;
     cursor: pointer;
     transition: background var(--transition-fast), color var(--transition-fast);
 }
 
 .action-menu-item:hover {
-    background: var(--bg-hover);
-    color: var(--text-primary);
+    background: var(--surface-container);
+    color: var(--on-surface);
 }
 
 .action-menu-item.danger {
-    color: var(--accent-coral);
+    color: var(--status-rejected);
 }
 
 .action-menu-item.danger:hover {
-    background: rgba(232, 93, 117, 0.08);
-    color: var(--accent-coral);
+    background: rgba(244, 63, 94, 0.08);
+    color: var(--status-rejected);
 }
 
 @keyframes fadeIn {
@@ -280,7 +283,7 @@
 .modal-overlay {
     position: fixed;
     inset: 0;
-    background: rgba(0, 0, 0, 0.5);
+    background: rgba(25, 28, 30, 0.25);
     backdrop-filter: blur(4px);
     display: flex;
     align-items: center;
@@ -289,8 +292,8 @@
 }
 
 .modal-content {
-    background: var(--bg-surface);
-    border: 1px solid var(--border-color);
+    background: var(--surface-container-lowest);
+    border: none;
     border-radius: var(--radius-xl);
     width: 100%;
     max-width: 480px;
@@ -310,8 +313,11 @@
 }
 
 .modal-header h3 {
+    font-family: 'Manrope', sans-serif;
     font-size: 1.1rem;
+    font-weight: 700;
     margin: 0;
+    color: var(--on-surface);
 }
 
 .modal-body {
@@ -337,21 +343,21 @@
 }
 
 .btn-danger {
-    background: var(--accent-coral);
-    color: white;
-    border: 1px solid var(--accent-coral);
+    background: rgba(244, 63, 94, 0.08);
+    color: var(--status-rejected);
+    border: 1px solid rgba(190, 18, 60, 0.15);
     padding: 8px 16px;
-    border-radius: var(--radius-md);
+    border-radius: var(--radius-pill);
     font-weight: 500;
     cursor: pointer;
     display: inline-flex;
     align-items: center;
     gap: 6px;
-    transition: opacity var(--transition-fast);
+    transition: all var(--transition-fast);
 }
 
 .btn-danger:hover {
-    opacity: 0.9;
+    background: rgba(244, 63, 94, 0.14);
 }
 
 .btn-danger:disabled {
@@ -360,8 +366,8 @@
 }
 
 .modal {
-    background: var(--bg-surface);
-    border: 1px solid var(--border-color);
+    background: var(--surface-container-lowest);
+    border: none;
     border-radius: var(--radius-xl);
     padding: 28px;
     width: 100%;
@@ -372,8 +378,11 @@
 }
 
 .modal h2 {
+    font-family: 'Manrope', sans-serif;
     font-size: 1.1rem;
+    font-weight: 700;
     margin-bottom: 20px;
+    color: var(--on-surface);
 }
 
 .modal-actions {
@@ -389,10 +398,12 @@
 }
 
 .settings-section h3 {
+    font-family: 'Manrope', sans-serif;
     font-size: 1rem;
+    font-weight: 600;
     margin-bottom: 16px;
     padding-bottom: 8px;
-    border-bottom: 1px solid var(--border-color);
+    color: var(--on-surface);
 }
 
 .settings-row {
@@ -404,6 +415,7 @@
 
 .settings-label {
     font-size: 0.88rem;
+    color: var(--on-surface);
 }
 
 .settings-desc {
@@ -427,7 +439,7 @@
     position: absolute;
     cursor: pointer;
     inset: 0;
-    background: var(--bg-hover);
+    background: var(--surface-hover);
     border-radius: 24px;
     transition: background var(--transition-fast);
 }
@@ -442,10 +454,11 @@
     background: white;
     border-radius: 50%;
     transition: transform var(--transition-fast);
+    box-shadow: 0 1px 3px rgba(25, 28, 30, 0.15);
 }
 
 .toggle-switch input:checked+.toggle-slider {
-    background: var(--accent-gold);
+    background: var(--accent-primary);
 }
 
 .toggle-switch input:checked+.toggle-slider::before {

@@ -3,6 +3,7 @@ import path from 'path';
 import { db } from '../db/index.js';
 import { approval, document, user, userProfile, signature, keywordMapping } from '../db/schema.js';
 import { PdfService } from './pdf.service.js';
+import { LogService } from './log.service.js';
 
 export const ApprovalService = {
 
@@ -418,6 +419,17 @@ export const ApprovalService = {
                             .where(eq(document.id, docId));
                     }
                 }
+
+                // Log the approval/rejection event (fire-and-forget, outside transaction)
+                const actionLabel = action === 'approve' ? 'approved' : 'rejected';
+                LogService.createLog(
+                    userId,
+                    action === 'approve' ? 'APPROVAL_GRANTED' : 'APPROVAL_REJECTED',
+                    'Document',
+                    docId,
+                    `${actionLabel} document "${doc.title}" (${doc.displayId}) at step ${currentStep.stepOrder}`,
+                    { category: doc.category, branch: doc.branch, stepOrder: currentStep.stepOrder, roleRequired: currentStep.roleRequired }
+                );
 
                 return { success: true, newStatus };
             });

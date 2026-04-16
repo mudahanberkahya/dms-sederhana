@@ -156,6 +156,8 @@ DMS/                              # Root (npm workspaces)
 │               ├── Workflows.jsx      # Konfigurasi workflow [ADMIN]
 │               ├── Keywords.jsx       # Mapping keyword→role [ADMIN]
 │               ├── Delegation.jsx     # Delegasi absensi [ADMIN]
+│               ├── AuditTrail.jsx     # Manajemen log aktivitas [ADMIN]
+│               ├── AuditTrail.css
 │               └── Settings.jsx       # Pengaturan akun
 ```
 
@@ -186,6 +188,7 @@ Database menggunakan **PostgreSQL** dengan **Drizzle ORM**. Schema didefinisikan
 | `approval` | Instance approval per dokumen (status, assignedUser, delegasi) |
 | `signature` | Gambar tanda tangan digital (PNG) per user |
 | `keyword_mapping` | Mapping keyword→role untuk penempatan signature otomatis pada PDF |
+| `activity_log` | Log aktivitas sistem (upload, approval, etc.) |
 
 ### Entity Relationship
 
@@ -199,6 +202,8 @@ erDiagram
     workflow ||--o{ workflow_step : contains
     workflow }o--|| document : "applied to"
     keyword_mapping }o--|| approval : "guides signature"
+    user ||--o{ activity_log : performs
+    activity_log }o--|| document : references
 ```
 
 ### Kolom Penting — Tabel `document`
@@ -288,6 +293,12 @@ Base URL: `http://localhost:3001/api`
 | GET | `/api/admin/keywords` | Daftar keyword mappings |
 | POST | `/api/admin/keywords` | Tambah keyword mapping |
 | DELETE | `/api/admin/keywords/:id` | Hapus keyword mapping |
+
+### Admin — Activity Logs
+
+| Method | Path | Deskripsi |
+|--------|------|-----------|
+| GET | `/api/logs` | Fetch system-wide activity logs (pagination + filters) |
 
 ### Health Check
 
@@ -406,7 +417,7 @@ Ketika approver menyetujui dokumen, sistem secara otomatis menempelkan tanda tan
 - My Approvals (tambahan)
 
 **Admin Only:**
-- Users, Signatures, Workflows, Keywords, Delegation
+- Users, Signatures, Workflows, Keywords, Delegation, Audit Trail
 
 ---
 

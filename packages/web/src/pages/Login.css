@@ -3,7 +3,7 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    background: var(--bg-primary);
+    background: var(--surface);
     position: relative;
     overflow: hidden;
 }
@@ -12,9 +12,9 @@
     position: absolute;
     inset: 0;
     background:
-        radial-gradient(ellipse at 20% 50%, rgba(201, 168, 76, 0.06) 0%, transparent 50%),
-        radial-gradient(ellipse at 80% 20%, rgba(46, 196, 182, 0.05) 0%, transparent 50%),
-        radial-gradient(ellipse at 60% 80%, rgba(108, 92, 231, 0.04) 0%, transparent 50%);
+        radial-gradient(ellipse at 20% 50%, rgba(53, 37, 205, 0.05) 0%, transparent 50%),
+        radial-gradient(ellipse at 80% 20%, rgba(79, 70, 229, 0.04) 0%, transparent 50%),
+        radial-gradient(ellipse at 60% 80%, rgba(99, 102, 241, 0.03) 0%, transparent 50%);
     pointer-events: none;
 }
 
@@ -22,10 +22,8 @@
     position: relative;
     width: 100%;
     max-width: 420px;
-    background: var(--glass-bg);
-    backdrop-filter: var(--glass-blur);
-    -webkit-backdrop-filter: var(--glass-blur);
-    border: 1px solid var(--glass-border);
+    background: var(--surface-container-lowest);
+    border: none;
     border-radius: var(--radius-xl);
     padding: 40px 36px;
     box-shadow: var(--shadow-lg);
@@ -42,12 +40,11 @@
     height: 64px;
     margin: 0 auto 16px;
     border-radius: var(--radius-lg);
-    background: linear-gradient(135deg, var(--accent-gold-subtle), var(--accent-teal-subtle));
-    border: 1px dashed var(--border-light);
+    background: var(--accent-primary-subtle);
     display: flex;
     align-items: center;
     justify-content: center;
-    color: var(--text-muted);
+    color: var(--accent-primary);
     overflow: hidden;
 }
 
@@ -58,10 +55,11 @@
 }
 
 .login-title {
+    font-family: 'Manrope', sans-serif;
     font-size: 1.6rem;
     font-weight: 700;
     letter-spacing: -0.03em;
-    color: var(--text-primary);
+    color: var(--on-surface);
     margin-bottom: 4px;
 }
 
@@ -97,7 +95,7 @@
 }
 
 .password-toggle:hover {
-    color: var(--text-primary);
+    color: var(--on-surface);
 }
 
 .login-options {
@@ -112,12 +110,12 @@
     align-items: center;
     gap: 8px;
     font-size: 0.83rem;
-    color: var(--text-secondary);
+    color: var(--on-surface-variant);
     cursor: pointer;
 }
 
 .remember-me input[type="checkbox"] {
-    accent-color: var(--accent-gold);
+    accent-color: var(--accent-primary);
 }
 
 .login-btn {

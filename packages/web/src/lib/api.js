@@ -197,5 +197,18 @@ export const api = {
 
     subcategories: {
         list: (category) => fetchApi(`/subcategories?category=${encodeURIComponent(category)}`)
+    },
+
+    logs: {
+        list: (params = {}) => {
+            const query = new URLSearchParams();
+            if (params.limit) query.set('limit', params.limit);
+            if (params.offset) query.set('offset', params.offset);
+            if (params.action) query.set('action', params.action);
+            if (params.startDate) query.set('startDate', params.startDate);
+            if (params.endDate) query.set('endDate', params.endDate);
+            const qs = query.toString();
+            return fetchApi(`/logs${qs ? '?' + qs : ''}`);
+        }
     }
 };

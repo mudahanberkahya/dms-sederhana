@@ -20,8 +20,8 @@
     width: 32px;
     height: 32px;
     border-radius: 50%;
-    background: var(--bg-elevated);
-    border: 2px solid var(--border-color);
+    background: var(--surface-container);
+    border: 2px solid var(--outline-variant);
     display: flex;
     align-items: center;
     justify-content: center;
@@ -32,16 +32,16 @@
 }
 
 .step-item.active .step-number {
-    background: var(--accent-gold);
-    border-color: var(--accent-gold);
+    background: linear-gradient(135deg, #3525cd, #4f46e5);
+    border-color: var(--accent-primary);
     color: var(--text-inverse);
-    box-shadow: var(--shadow-glow-gold);
+    box-shadow: 0 4px 14px rgba(53, 37, 205, 0.20);
 }
 
 .step-item.completed .step-number {
-    background: var(--status-approved-bg);
-    border-color: var(--status-approved);
-    color: var(--status-approved);
+    background: rgba(16, 185, 129, 0.12);
+    border-color: #15803d;
+    color: #15803d;
 }
 
 .step-label {
@@ -51,11 +51,11 @@
 }
 
 .step-item.active .step-label {
-    color: var(--text-primary);
+    color: var(--on-surface);
 }
 
 .step-item.completed .step-label {
-    color: var(--status-approved);
+    color: #15803d;
 }
 
 .step-connector {
@@ -67,7 +67,7 @@
 
 .step-item.completed+.step-item .step-connector,
 .step-item.completed .step-connector {
-    background: var(--status-approved);
+    background: #15803d;
     opacity: 0.3;
 }
 
@@ -80,7 +80,7 @@
 
 /* Drop Zone */
 .drop-zone {
-    border: 2px dashed var(--border-light);
+    border: 2px dashed var(--outline-variant);
     border-radius: var(--radius-lg);
     padding: 48px 24px;
     text-align: center;
@@ -89,14 +89,14 @@
 }
 
 .drop-zone:hover {
-    border-color: var(--accent-gold);
-    background: var(--accent-gold-subtle);
+    border-color: var(--accent-primary);
+    background: var(--accent-primary-subtle);
 }
 
 .drop-zone.has-file {
     border-style: solid;
-    border-color: var(--status-approved);
-    background: var(--status-approved-bg);
+    border-color: #15803d;
+    background: rgba(16, 185, 129, 0.08);
 }
 
 .drop-icon {
@@ -107,7 +107,7 @@
 .drop-text {
     font-size: 1rem;
     font-weight: 500;
-    color: var(--text-secondary);
+    color: var(--on-surface-variant);
     margin-bottom: 4px;
 }
 
@@ -126,7 +126,7 @@
     display: flex;
     align-items: center;
     gap: 14px;
-    color: var(--text-primary);
+    color: var(--on-surface);
 }
 
 .file-info h4 {
@@ -153,23 +153,22 @@
     align-items: center;
     gap: 6px;
     padding: 20px 14px;
-    border: 1px solid var(--border-color);
+    border: none;
     border-radius: var(--radius-lg);
-    background: var(--bg-elevated);
-    color: var(--text-secondary);
+    background: var(--surface-container);
+    color: var(--on-surface-variant);
     cursor: pointer;
     transition: all var(--transition-fast);
 }
 
 .category-option:hover {
-    border-color: var(--accent-gold);
-    color: var(--text-primary);
+    background: var(--surface-hover);
+    color: var(--on-surface);
 }
 
 .category-option.selected {
-    border-color: var(--accent-gold);
-    background: var(--accent-gold-subtle);
-    color: var(--accent-gold);
+    background: var(--accent-primary-subtle);
+    color: var(--accent-primary);
 }
 
 .category-option span {
@@ -184,8 +183,10 @@
 
 /* Review Step */
 .review-title {
+    font-family: 'Manrope', sans-serif;
     font-size: 1.1rem;
     margin-bottom: 20px;
+    color: var(--on-surface);
 }
 
 .review-grid {
@@ -200,11 +201,10 @@
     justify-content: space-between;
     align-items: center;
     padding-bottom: 12px;
-    border-bottom: 1px solid var(--border-color);
 }
 
 .review-workflow {
-    background: var(--bg-elevated);
+    background: var(--surface-container);
     padding: 16px;
     border-radius: var(--radius-md);
 }
@@ -221,7 +221,6 @@
     gap: 12px;
     margin-top: 28px;
     padding-top: 20px;
-    border-top: 1px solid var(--border-color);
 }
 
 @media (max-width: 640px) {

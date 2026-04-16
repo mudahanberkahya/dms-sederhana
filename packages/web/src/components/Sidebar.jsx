@@ -15,6 +15,7 @@ import {
     ChevronsLeft,
     ChevronsRight,
     Building2,
+    ClipboardList,
 } from 'lucide-react';
 import './Sidebar.css';
 import logoImg from '../assets/logo.png';
@@ -35,6 +36,7 @@ const adminNav = [
     { label: 'Workflows', icon: GitBranch, path: '/admin/workflows' },
     { label: 'Keywords', icon: Search, path: '/admin/keywords' },
     { label: 'Delegation', icon: UserRoundCog, path: '/admin/delegation' },
+    { label: 'Audit Trail', icon: ClipboardList, path: '/admin/audit-trail' },
 ];
 
 export default function Sidebar({ collapsed, onToggle, mobileOpen, onMobileClose }) {

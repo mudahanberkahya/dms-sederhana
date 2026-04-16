@@ -1,78 +1,80 @@
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Manrope:wght@600;700&display=swap');
 
 :root {
-  /* Background Colors */
-  --bg-primary: #0f1123;
-  --bg-surface: #1a1d35;
-  --bg-elevated: #242847;
-  --bg-hover: #2d3158;
-  --bg-input: #1e2140;
-  
-  /* Accent Colors */
-  --accent-gold: #c9a84c;
-  --accent-gold-hover: #d4b85e;
-  --accent-gold-subtle: rgba(201, 168, 76, 0.12);
-  --accent-teal: #2ec4b6;
-  --accent-teal-subtle: rgba(46, 196, 182, 0.12);
-  
-  /* Text Colors */
-  --text-primary: #f0f0f5;
-  --text-secondary: #8b8fa3;
-  --text-muted: #5c6078;
-  --text-inverse: #0f1123;
-  
-  /* Status Colors */
-  --status-pending: #f5a623;
-  --status-pending-bg: rgba(245, 166, 35, 0.12);
-  --status-approved: #27ae60;
-  --status-approved-bg: rgba(39, 174, 96, 0.12);
-  --status-rejected: #e74c3c;
-  --status-rejected-bg: rgba(231, 76, 60, 0.12);
-  --status-in-progress: #3498db;
-  --status-in-progress-bg: rgba(52, 152, 219, 0.12);
+  /* ========== TONAL ARCHITECTURE ========== */
+  --surface: #f7f9fb;
+  --surface-container-low: #f2f4f6;
+  --surface-container: #eceef0;
+  --surface-container-lowest: #ffffff;
+  --surface-hover: #e8eaed;
 
-  /* Category Colors */
+  /* ========== ACCENT ========== */
+  --accent-primary: #3525cd;
+  --accent-primary-hover: #4f46e5;
+  --accent-primary-subtle: rgba(53, 37, 205, 0.08);
+
+  /* ========== TEXT (on-surface) ========== */
+  --on-surface: #191c1e;
+  --on-surface-variant: #464555;
+  --text-muted: #8e8c9a;
+  --text-inverse: #ffffff;
+
+  /* Legacy aliases — keeps component CSS readable */
+  --text-primary: var(--on-surface);
+  --text-secondary: var(--on-surface-variant);
+  --bg-primary: var(--surface);
+  --bg-surface: var(--surface-container-low);
+  --bg-elevated: var(--surface-container);
+  --bg-hover: var(--surface-hover);
+  --bg-input: var(--surface-container-lowest);
+
+  /* ========== STATUS (Soft Atelier) ========== */
+  --status-pending: #b45309;
+  --status-pending-bg: rgba(245, 158, 11, 0.50);
+  --status-approved: #15803d;
+  --status-approved-bg: rgba(16, 185, 129, 0.50);
+  --status-rejected: #be123c;
+  --status-rejected-bg: rgba(244, 63, 94, 0.50);
+  --status-in-progress: #1d4ed8;
+  --status-in-progress-bg: rgba(59, 130, 246, 0.50);
+
+  /* Category Colors (Soft) */
   --cat-po: #6c5ce7;
   --cat-po-bg: rgba(108, 92, 231, 0.12);
   --cat-ca: #00b894;
   --cat-ca-bg: rgba(0, 184, 148, 0.12);
   --cat-memo: #e17055;
   --cat-memo-bg: rgba(225, 112, 85, 0.12);
-  --cat-petty: #fdcb6e;
+  --cat-petty: #b45309;
   --cat-petty-bg: rgba(253, 203, 110, 0.12);
 
-  /* Borders */
-  --border-color: rgba(255, 255, 255, 0.06);
-  --border-light: rgba(255, 255, 255, 0.1);
-  
-  /* Radius */
+  /* ========== GHOST BORDER ========== */
+  --border-color: rgba(199, 196, 216, 0.15);
+  --border-light: rgba(199, 196, 216, 0.20);
+  --outline-variant: rgba(199, 196, 216, 0.15);
+
+  /* ========== RADIUS ========== */
   --radius-sm: 6px;
-  --radius-md: 8px;
-  --radius-lg: 12px;
-  --radius-xl: 16px;
-  --radius-pill: 50px;
-  
-  /* Shadows */
-  --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.15);
-  --shadow-md: 0 4px 16px rgba(0, 0, 0, 0.2);
-  --shadow-lg: 0 8px 32px rgba(0, 0, 0, 0.3);
-  --shadow-glow-gold: 0 0 20px rgba(201, 168, 76, 0.2);
-  --shadow-glow-teal: 0 0 20px rgba(46, 196, 182, 0.15);
-  
-  /* Layout */
+  --radius-md: 10px;
+  --radius-lg: 0.75rem;
+  --radius-xl: 1rem;
+  --radius-pill: 9999px;
+
+  /* ========== AMBIENT SHADOWS ========== */
+  --shadow-ambient: 0 20px 40px -10px rgba(25, 28, 30, 0.06);
+  --shadow-sm: 0 1px 3px rgba(25, 28, 30, 0.04);
+  --shadow-md: 0 8px 24px -6px rgba(25, 28, 30, 0.08);
+  --shadow-lg: 0 20px 40px -10px rgba(25, 28, 30, 0.10);
+
+  /* ========== LAYOUT ========== */
   --sidebar-width: 260px;
   --sidebar-collapsed: 72px;
   --navbar-height: 64px;
-  
-  /* Transitions */
+
+  /* ========== TRANSITIONS ========== */
   --transition-fast: 150ms ease;
   --transition-normal: 250ms ease;
   --transition-slow: 400ms cubic-bezier(0.4, 0, 0.2, 1);
-  
-  /* Glass */
-  --glass-bg: rgba(26, 29, 53, 0.7);
-  --glass-border: rgba(255, 255, 255, 0.08);
-  --glass-blur: blur(12px);
 }
 
 *, *::before, *::after {
@@ -89,20 +91,20 @@ html {
 
 body {
   font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
-  background-color: var(--bg-primary);
-  color: var(--text-primary);
+  background-color: var(--surface);
+  color: var(--on-surface);
   line-height: 1.6;
   overflow-x: hidden;
 }
 
 a {
-  color: var(--accent-teal);
+  color: var(--accent-primary);
   text-decoration: none;
   transition: color var(--transition-fast);
 }
 
 a:hover {
-  color: var(--accent-gold);
+  color: var(--accent-primary-hover);
 }
 
 button {
@@ -114,6 +116,8 @@ input, select, textarea {
   font-family: inherit;
 }
 
+/* ==================== SCROLLBAR ==================== */
+
 ::-webkit-scrollbar {
   width: 6px;
   height: 6px;
@@ -124,7 +128,7 @@ input, select, textarea {
 }
 
 ::-webkit-scrollbar-thumb {
-  background: var(--bg-hover);
+  background: var(--surface-container);
   border-radius: 3px;
 }
 
@@ -135,7 +139,7 @@ input, select, textarea {
 /* ==================== UTILITIES ==================== */
 
 .mono {
-  font-family: 'JetBrains Mono', monospace;
+  font-family: 'JetBrains Mono', 'Fira Code', monospace;
 }
 
 .sr-only {
@@ -155,9 +159,9 @@ input, select, textarea {
   display: inline-flex;
   align-items: center;
   gap: 8px;
-  padding: 10px 20px;
+  padding: 10px 22px;
   border: none;
-  border-radius: var(--radius-md);
+  border-radius: var(--radius-pill);
   font-size: 0.9rem;
   font-weight: 500;
   transition: all var(--transition-normal);
@@ -165,47 +169,46 @@ input, select, textarea {
 }
 
 .btn-primary {
-  background: linear-gradient(135deg, var(--accent-gold), #b8942f);
+  background: linear-gradient(135deg, #3525cd, #4f46e5);
   color: var(--text-inverse);
-  box-shadow: var(--shadow-glow-gold);
+  box-shadow: 0 4px 14px rgba(53, 37, 205, 0.20);
 }
 .btn-primary:hover {
-  background: linear-gradient(135deg, var(--accent-gold-hover), var(--accent-gold));
+  background: linear-gradient(135deg, #4f46e5, #6366f1);
   transform: translateY(-1px);
-  box-shadow: 0 0 30px rgba(201, 168, 76, 0.3);
+  box-shadow: 0 6px 20px rgba(53, 37, 205, 0.28);
 }
 
 .btn-secondary {
-  background: var(--bg-elevated);
-  color: var(--text-primary);
-  border: 1px solid var(--border-light);
+  background: var(--surface-container);
+  color: var(--accent-primary);
+  border: none;
 }
 .btn-secondary:hover {
-  background: var(--bg-hover);
-  border-color: var(--accent-gold);
+  background: var(--surface-hover);
 }
 
 .btn-danger {
   background: transparent;
   color: var(--status-rejected);
-  border: 1px solid var(--status-rejected);
+  border: 1px solid rgba(190, 18, 60, 0.2);
 }
 .btn-danger:hover {
-  background: var(--status-rejected-bg);
+  background: rgba(244, 63, 94, 0.08);
 }
 
 .btn-ghost {
   background: transparent;
-  color: var(--text-secondary);
+  color: var(--on-surface-variant);
   padding: 8px 12px;
 }
 .btn-ghost:hover {
-  background: var(--bg-hover);
-  color: var(--text-primary);
+  background: var(--surface-container);
+  color: var(--on-surface);
 }
 
 .btn-sm {
-  padding: 6px 14px;
+  padding: 6px 16px;
   font-size: 0.82rem;
 }
 
@@ -214,18 +217,18 @@ input, select, textarea {
   border-radius: var(--radius-md);
   background: transparent;
   border: none;
-  color: var(--text-secondary);
+  color: var(--on-surface-variant);
   display: flex;
   align-items: center;
   justify-content: center;
   transition: all var(--transition-fast);
 }
 .btn-icon:hover {
-  background: var(--bg-hover);
-  color: var(--text-primary);
+  background: var(--surface-container);
+  color: var(--on-surface);
 }
 
-/* ==================== BADGES ==================== */
+/* ==================== BADGES (Soft Atelier) ==================== */
 
 .badge {
   display: inline-flex;
@@ -273,20 +276,18 @@ input, select, textarea {
   color: var(--cat-petty);
 }
 
-/* ==================== CARDS ==================== */
+/* ==================== CARDS (Stacking / No Border) ==================== */
 
 .card {
-  background: var(--glass-bg);
-  backdrop-filter: var(--glass-blur);
-  -webkit-backdrop-filter: var(--glass-blur);
-  border: 1px solid var(--glass-border);
+  background: var(--surface-container-lowest);
+  border: none;
   border-radius: var(--radius-lg);
   padding: 24px;
+  box-shadow: var(--shadow-ambient);
   transition: all var(--transition-normal);
 }
 
 .card:hover {
-  border-color: var(--border-light);
   box-shadow: var(--shadow-md);
 }
 
@@ -298,9 +299,10 @@ input, select, textarea {
 }
 
 .card-title {
+  font-family: 'Manrope', sans-serif;
   font-size: 1rem;
   font-weight: 600;
-  color: var(--text-primary);
+  color: var(--on-surface);
 }
 
 /* ==================== FORM ELEMENTS ==================== */
@@ -315,22 +317,23 @@ input, select, textarea {
 .form-label {
   font-size: 0.85rem;
   font-weight: 500;
-  color: var(--text-secondary);
+  color: var(--on-surface-variant);
 }
 
 .form-input {
   padding: 10px 14px;
-  background: var(--bg-input);
-  border: 1px solid var(--border-color);
+  background: var(--surface-container-lowest);
+  border: 1px solid var(--outline-variant);
   border-radius: var(--radius-md);
-  color: var(--text-primary);
+  color: var(--on-surface);
   font-size: 0.93rem;
   transition: all var(--transition-fast);
   outline: none;
 }
 .form-input:focus {
-  border-color: var(--accent-gold);
-  box-shadow: 0 0 0 3px var(--accent-gold-subtle);
+  border-color: transparent;
+  border-bottom: 2px solid var(--accent-primary);
+  box-shadow: 0 0 0 3px var(--accent-primary-subtle);
 }
 .form-input::placeholder {
   color: var(--text-muted);
@@ -338,10 +341,10 @@ input, select, textarea {
 
 .form-select {
   padding: 10px 14px;
-  background: var(--bg-input);
-  border: 1px solid var(--border-color);
+  background: var(--surface-container-lowest);
+  border: 1px solid var(--outline-variant);
   border-radius: var(--radius-md);
-  color: var(--text-primary);
+  color: var(--on-surface);
   font-size: 0.93rem;
   outline: none;
   appearance: none;
@@ -349,8 +352,9 @@ input, select, textarea {
   transition: all var(--transition-fast);
 }
 .form-select:focus {
-  border-color: var(--accent-gold);
-  box-shadow: 0 0 0 3px var(--accent-gold-subtle);
+  border-color: transparent;
+  border-bottom: 2px solid var(--accent-primary);
+  box-shadow: 0 0 0 3px var(--accent-primary-subtle);
 }
 
 /* ==================== TABLE ==================== */
@@ -369,7 +373,8 @@ input, select, textarea {
   color: var(--text-muted);
   text-transform: uppercase;
   letter-spacing: 0.06em;
-  border-bottom: 1px solid var(--border-color);
+  border-bottom: none;
+  background: var(--surface-container-low);
 }
 
 .data-table tbody tr {
@@ -377,14 +382,15 @@ input, select, textarea {
 }
 
 .data-table tbody tr:hover {
-  background: var(--bg-hover);
+  background: var(--surface-container-low);
+  border-radius: var(--radius-lg);
 }
 
 .data-table tbody td {
   padding: 14px 16px;
   font-size: 0.9rem;
-  color: var(--text-primary);
-  border-bottom: 1px solid var(--border-color);
+  color: var(--on-surface);
+  border-bottom: none;
 }
 
 /* ==================== ANIMATIONS ==================== */

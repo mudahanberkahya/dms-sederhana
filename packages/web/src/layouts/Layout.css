@@ -1,6 +1,6 @@
 .layout {
     min-height: 100vh;
-    background: var(--bg-primary);
+    background: var(--surface);
 }
 
 .main-content {
@@ -24,15 +24,17 @@
 }
 
 .page-title {
+    font-family: 'Manrope', sans-serif;
     font-size: 1.5rem;
     font-weight: 700;
     letter-spacing: -0.02em;
-    color: var(--text-primary);
+    color: var(--on-surface);
 }
 
 .page-subtitle {
+    font-family: 'Inter', sans-serif;
     font-size: 0.88rem;
-    color: var(--text-secondary);
+    color: var(--on-surface-variant);
     margin-top: 4px;
 }
 

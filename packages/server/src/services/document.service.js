@@ -4,6 +4,7 @@ import path from 'path';
 import { db } from '../db/index.js';
 import { document, approval, workflow, workflowStep, userProfile, user } from '../db/schema.js';
 import { ApprovalService } from './approval.service.js';
+import { LogService } from './log.service.js';
 
 export const DocumentService = {
 
@@ -161,6 +162,16 @@ export const DocumentService = {
                 console.error(`[DocumentService] CRITICAL: No workflow defined for category "${category}" at branch "${branch}" or "All"`);
                 throw new Error(`Manajemen tidak menemukan Alur Persetujuan (Workflow) untuk kategori "${category}". Mohon hubungi Administrator.`);
             }
+
+            // Log the upload event (fire-and-forget, outside transaction)
+            LogService.createLog(
+                uploadedBy,
+                'DOCUMENT_UPLOADED',
+                'Document',
+                newDoc.id,
+                `uploaded document "${title}" (${displayId})`,
+                { category, branch, subCategory: subCategory || null }
+            );
 
             return newDoc;
         });

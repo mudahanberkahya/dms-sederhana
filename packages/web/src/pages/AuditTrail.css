@@ -1,0 +1,164 @@
+/* Audit Trail Page — Architectural Minimalist */
+
+/* ==================== FILTERS ==================== */
+
+.audit-filters-card {
+    margin-bottom: 16px;
+    padding: 16px 20px;
+}
+
+.audit-filters {
+    display: flex;
+    align-items: flex-end;
+    gap: 16px;
+    flex-wrap: wrap;
+}
+
+.audit-filter-group {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.audit-filter-label {
+    font-family: 'Inter', sans-serif;
+    font-size: 0.75rem;
+    font-weight: 500;
+    color: var(--text-muted);
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.audit-filter-select {
+    min-width: 180px;
+}
+
+.audit-filter-input {
+    min-width: 150px;
+}
+
+.audit-reset-btn {
+    align-self: flex-end;
+    margin-bottom: 1px;
+}
+
+/* ==================== LOG TABLE ==================== */
+
+.audit-table-card {
+    padding: 0;
+    overflow: hidden;
+}
+
+.audit-table {
+    min-width: 700px;
+}
+
+.audit-timestamp {
+    font-family: 'Inter', sans-serif;
+    font-size: 0.78rem;
+    font-weight: 500;
+    color: var(--text-muted);
+    white-space: nowrap;
+}
+
+.audit-user {
+    font-family: 'Inter', sans-serif;
+    font-size: 0.85rem;
+    font-weight: 500;
+    color: var(--on-surface);
+}
+
+.audit-action-cell {
+    display: flex;
+    align-items: center;
+}
+
+.audit-action-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    padding: 3px 10px;
+    border-radius: var(--radius-pill);
+    font-family: 'Inter', sans-serif;
+    font-size: 0.72rem;
+    font-weight: 600;
+    white-space: nowrap;
+}
+
+.audit-action-emerald {
+    background: rgba(16, 185, 129, 0.50);
+    color: #15803d;
+}
+
+.audit-action-rose {
+    background: rgba(244, 63, 94, 0.50);
+    color: #be123c;
+}
+
+.audit-action-blue {
+    background: rgba(59, 130, 246, 0.50);
+    color: #1d4ed8;
+}
+
+.audit-action-amber {
+    background: rgba(245, 158, 11, 0.50);
+    color: #b45309;
+}
+
+.audit-entity {
+    font-family: 'Inter', sans-serif;
+    font-size: 0.82rem;
+    font-weight: 500;
+    color: var(--on-surface-variant);
+    padding: 2px 8px;
+    background: var(--surface-container);
+    border-radius: var(--radius-sm);
+}
+
+.audit-details {
+    font-family: 'Inter', sans-serif;
+    font-size: 0.82rem;
+    color: var(--on-surface-variant);
+    max-width: 300px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+/* ==================== PAGINATION ==================== */
+
+.audit-pagination {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 14px 20px;
+}
+
+.audit-pagination .pagination-info {
+    font-family: 'Inter', sans-serif;
+    font-size: 0.78rem;
+    font-weight: 500;
+    color: var(--text-muted);
+}
+
+.audit-pagination .pagination-controls {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
+/* ==================== RESPONSIVE ==================== */
+
+@media (max-width: 768px) {
+    .audit-filters {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .audit-filter-select,
+    .audit-filter-input {
+        min-width: unset;
+        width: 100%;
+    }
+}

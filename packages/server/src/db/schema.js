@@ -159,3 +159,17 @@ export const keywordMapping = pgTable("keyword_mapping", {
     positionHint: varchar("position_hint", { length: 100 }), // e.g., 'Below table', 'Footer'
     createdAt: timestamp("created_at").defaultNow().notNull()
 });
+
+// ==========================================
+// ACTIVITY LOG TABLE
+// ==========================================
+export const activityLog = pgTable("activity_log", {
+    id: uuid("id").defaultRandom().primaryKey(),
+    userId: text("user_id").references(() => user.id, { onDelete: 'set null' }),
+    action: varchar("action", { length: 100 }).notNull(), // DOCUMENT_UPLOADED, APPROVAL_GRANTED, APPROVAL_REJECTED, WORKFLOW_UPDATED, KEYWORD_UPDATED, USER_CREATED
+    entity: varchar("entity", { length: 50 }).notNull(),   // Document, Workflow, User, Keyword
+    entityId: text("entity_id"),                            // UUID or ID of the target entity
+    details: text("details").notNull(),                     // Human-readable summary e.g. "Nawawi uploaded Monthly_Tax_Report_Q3.pdf"
+    metadata: text("metadata"),                             // Optional JSON blob for extra context
+    createdAt: timestamp("created_at").defaultNow().notNull()
+});

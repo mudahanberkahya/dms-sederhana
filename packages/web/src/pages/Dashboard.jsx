@@ -9,13 +9,38 @@ import {
     XCircle,
     ArrowUpRight,
     TrendingUp,
-    Loader2
+    Loader2,
+    FileUp,
+    UserPlus,
+    Settings2
 } from 'lucide-react';
 import './Dashboard.css';
+
+// ── helpers ──────────────────────────────────────────────
+const ACTIVITY_MAP = {
+    DOCUMENT_UPLOADED:  { icon: FileUp,       color: 'blue',    label: 'Document Uploaded' },
+    APPROVAL_GRANTED:   { icon: CheckCircle2,  color: 'emerald', label: 'Approval Granted' },
+    APPROVAL_REJECTED:  { icon: XCircle,       color: 'rose',    label: 'Approval Rejected' },
+    WORKFLOW_UPDATED:   { icon: Settings2,     color: 'amber',   label: 'Workflow Updated' },
+    KEYWORD_UPDATED:    { icon: Settings2,     color: 'amber',   label: 'Keyword Updated' },
+    USER_CREATED:       { icon: UserPlus,      color: 'blue',    label: 'User Joined' },
+};
+
+function timeAgo(dateStr) {
+    const now = new Date();
+    const then = new Date(dateStr);
+    const diff = Math.floor((now - then) / 1000);
+    if (diff < 60) return 'Just now';
+    if (diff < 3600) return `${Math.floor(diff / 60)} min ago`;
+    if (diff < 86400) return `${Math.floor(diff / 3600)} hours ago`;
+    if (diff < 604800) return `${Math.floor(diff / 86400)} days ago`;
+    return then.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
+}
 
 export default function Dashboard() {
     const { user, currentBranch } = useContext(AppContext);
     const [recentDocs, setRecentDocs] = useState([]);
+    const [activityFeed, setActivityFeed] = useState([]);
     const [stats, setStats] = useState({
         pending: 0,
         approved: 0,
@@ -27,9 +52,10 @@ export default function Dashboard() {
     useEffect(() => {
         const fetchDashboardData = async () => {
             try {
-                const [docsRes, pendingRes] = await Promise.all([
+                const [docsRes, pendingRes, logsRes] = await Promise.all([
                     api.documents.list(),
                     api.approvals.pending(),
+                    api.logs.list({ limit: 5 }).catch(() => ({ logs: [] })),
                 ]);
 
                 // Get recent 6 docs for the selected branch (or all branches)
@@ -47,6 +73,9 @@ export default function Dashboard() {
                     rejected: rejectedCount,
                     total: filteredDocs.length
                 });
+
+                // Set activity feed from logs API
+                setActivityFeed(logsRes.logs || []);
             } catch (error) {
                 console.error("Error fetching dashboard data:", error);
             } finally {
@@ -57,16 +86,12 @@ export default function Dashboard() {
         fetchDashboardData();
     }, [currentBranch]);
 
-    const activityFeed = [
-        { user: 'System', action: 'logged in', doc: 'DMS Core', time: 'Just now' }
-    ];
-
     const statusBadgeClass = (status) => {
         if (!status) return 'badge-neutral';
         switch (status.toUpperCase()) {
-            case 'APPROVED': return 'badge-success';
-            case 'REJECTED': return 'badge-danger';
-            case 'PENDING': return 'badge-warning';
+            case 'APPROVED': return 'badge-approved';
+            case 'REJECTED': return 'badge-rejected';
+            case 'PENDING': return 'badge-pending';
             default: return 'badge-neutral';
         }
     };
@@ -74,9 +99,9 @@ export default function Dashboard() {
     const categoryBadgeClass = (category) => {
         if (!category) return 'badge-neutral';
         switch (category) {
-            case 'Purchase Order': return 'badge-primary';
-            case 'Cash Advance': return 'badge-accent';
-            case 'Memo': return 'badge-info';
+            case 'Purchase Order': return 'badge-po';
+            case 'Cash Advance': return 'badge-ca';
+            case 'Memo': return 'badge-memo';
             default: return 'badge-neutral';
         }
     };
@@ -84,7 +109,7 @@ export default function Dashboard() {
     if (loading) {
         return (
             <div className="dashboard" style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '60vh' }}>
-                <Loader2 size={32} style={{ animation: 'spin 1s linear infinite', color: 'var(--accent-teal)' }} />
+                <Loader2 size={32} style={{ animation: 'spin 1s linear infinite', color: 'var(--accent-primary)' }} />
             </div>
         );
     }
@@ -208,26 +233,43 @@ export default function Dashboard() {
                     </div>
                 </div>
 
-                {/* Activity Feed */}
+                {/* Activity Feed — Live from /api/logs */}
                 <div className="card activity-card">
                     <div className="card-header">
                         <h2 className="card-title">Activity Feed</h2>
-                        <TrendingUp size={16} className="text-muted" />
+                        <TrendingUp size={16} style={{ color: 'var(--text-muted)' }} />
                     </div>
                     <div className="activity-list">
-                        {activityFeed.map((act, i) => (
-                            <div key={i} className="activity-item" style={{ animationDelay: `${i * 60}ms` }}>
-                                <div className={`activity-dot dot-${act.action.replace(' ', '-')}`} />
-                                <div className="activity-content">
-                                    <p>
-                                        <strong>{act.user}</strong> {act.action}{' '}
-                                        <span className="mono">{act.doc}</span>
-                                    </p>
-                                    <span className="activity-time">{act.time}</span>
+                        {activityFeed.length > 0 ? activityFeed.map((log, i) => {
+                            const cfg = ACTIVITY_MAP[log.action] || ACTIVITY_MAP.DOCUMENT_UPLOADED;
+                            const Icon = cfg.icon;
+                            return (
+                                <div key={log.id || i} className="activity-item" style={{ animationDelay: `${i * 60}ms` }}>
+                                    <div className={`activity-icon-circle activity-icon-${cfg.color}`}>
+                                        <Icon size={16} />
+                                    </div>
+                                    <div className="activity-content">
+                                        <p className="activity-title">{cfg.label}</p>
+                                        <p className="activity-detail">
+                                            <strong>{log.userName || 'System'}</strong>{' '}
+                                            {log.details}
+                                        </p>
+                                        <span className="activity-time">{timeAgo(log.createdAt)}</span>
+                                    </div>
                                 </div>
+                            );
+                        }) : (
+                            <div className="empty-state" style={{ padding: '32px 16px' }}>
+                                <TrendingUp size={32} />
+                                <p>No activity yet</p>
                             </div>
-                        ))}
+                        )}
                     </div>
+                    {activityFeed.length > 0 && (
+                        <Link to="/admin/audit-trail" className="btn btn-ghost btn-sm" style={{ width: '100%', justifyContent: 'center', marginTop: '12px' }}>
+                            View Full Audit Trail <ArrowUpRight size={14} />
+                        </Link>
+                    )}
                 </div>
             </div>
         </div>

@@ -25,14 +25,14 @@
     align-items: center;
     justify-content: space-between;
     padding: 14px 20px;
-    border-bottom: 1px solid var(--border-color);
+    background: var(--surface-container-low);
 }
 
 .pdf-info {
     display: flex;
     align-items: center;
     gap: 8px;
-    color: var(--text-secondary);
+    color: var(--on-surface-variant);
     font-size: 0.85rem;
 }
 
@@ -93,7 +93,7 @@
 
 .info-value {
     font-size: 0.85rem;
-    color: var(--text-primary);
+    color: var(--on-surface);
     text-align: right;
 }
 
@@ -131,21 +131,21 @@
 }
 
 .step-completed .stepper-line {
-    background: var(--status-approved);
+    background: #15803d;
     opacity: 0.3;
 }
 
 .step-current .stepper-line {
-    background: var(--accent-gold);
+    background: var(--accent-primary);
     opacity: 0.3;
 }
 
 .step-icon.completed {
-    color: var(--status-approved);
+    color: #15803d;
 }
 
 .step-icon.current {
-    color: var(--accent-gold);
+    color: var(--accent-primary);
     animation: pulse 2s infinite;
 }
 
@@ -165,13 +165,13 @@
 .stepper-role {
     font-size: 0.82rem;
     font-weight: 600;
-    color: var(--text-primary);
+    color: var(--on-surface);
     margin-bottom: 2px;
 }
 
 .stepper-user {
     font-size: 0.82rem;
-    color: var(--text-secondary);
+    color: var(--on-surface-variant);
 }
 
 .stepper-delegate {
@@ -181,8 +181,8 @@
     margin-top: 4px;
     padding: 3px 8px;
     border-radius: var(--radius-sm);
-    background: var(--accent-gold-subtle);
-    color: var(--accent-gold);
+    background: var(--accent-primary-subtle);
+    color: var(--accent-primary);
     font-size: 0.72rem;
     font-weight: 500;
     width: fit-content;
