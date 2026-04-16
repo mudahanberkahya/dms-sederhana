@@ -2,6 +2,7 @@ import express from 'express';
 import { requireAuth } from '../middleware/auth.js';
 import { DocumentService } from '../services/document.service.js';
 import { WorkflowService } from '../services/workflow.service.js';
+import { LogService } from '../services/log.service.js';
 import { db } from '../db/index.js';
 import { userProfile } from '../db/schema.js';
 import { eq } from 'drizzle-orm';
@@ -202,11 +203,24 @@ router.delete('/:id', requireAuth, async (req, res) => {
             return res.status(403).json({ error: "Forbidden: Only administrators can delete documents" });
         }
 
+        const doc = await DocumentService.getDocumentById(req.params.id);
+        if (!doc) {
+            return res.status(404).json({ error: "Document not found or already deleted" });
+        }
+
         const success = await DocumentService.deleteDocument(req.params.id);
 
         if (!success) {
             return res.status(404).json({ error: "Document not found or already deleted" });
         }
+
+        LogService.createLog(
+            req.user.id,
+            'DOCUMENT_DELETED',
+            'Document',
+            req.params.id,
+            `deleted document "${doc.title}" (${doc.displayId})`
+        );
 
         res.json({ message: "Document deleted successfully" });
     } catch (err) {

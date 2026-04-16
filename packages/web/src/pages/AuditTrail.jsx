@@ -11,13 +11,15 @@ import {
     ChevronLeft,
     ChevronRight,
     Loader2,
-    Filter
+    Filter,
+    Trash2
 } from 'lucide-react';
 import './AuditTrail.css';
 
 const ACTION_OPTIONS = [
     { value: '', label: 'All Actions' },
     { value: 'DOCUMENT_UPLOADED', label: 'Document Uploaded' },
+    { value: 'DOCUMENT_DELETED', label: 'Document Deleted' },
     { value: 'APPROVAL_GRANTED', label: 'Approval Granted' },
     { value: 'APPROVAL_REJECTED', label: 'Approval Rejected' },
     { value: 'WORKFLOW_UPDATED', label: 'Workflow Updated' },
@@ -27,9 +29,10 @@ const ACTION_OPTIONS = [
 
 const ACTION_CONFIG = {
     DOCUMENT_UPLOADED:  { icon: FileUp,       color: 'blue',    label: 'Document Uploaded' },
-    APPROVAL_GRANTED:   { icon: CheckCircle2,  color: 'emerald', label: 'Approval Granted' },
-    APPROVAL_REJECTED:  { icon: XCircle,       color: 'rose',    label: 'Approval Rejected' },
-    WORKFLOW_UPDATED:   { icon: Settings2,     color: 'amber',   label: 'Workflow Updated' },
+    DOCUMENT_DELETED:   { icon: Trash2,       color: 'rose',    label: 'Document Deleted' },
+    APPROVAL_GRANTED:   { icon: CheckCircle2, color: 'emerald', label: 'Approval Granted' },
+    APPROVAL_REJECTED:  { icon: XCircle,      color: 'rose',    label: 'Approval Rejected' },
+    WORKFLOW_UPDATED:   { icon: Settings2,    color: 'amber',   label: 'Workflow Updated' },
     KEYWORD_UPDATED:    { icon: Settings2,     color: 'amber',   label: 'Keyword Updated' },
     USER_CREATED:       { icon: UserPlus,      color: 'blue',    label: 'User Joined' },
 };
