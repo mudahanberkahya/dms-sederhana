@@ -63,4 +63,20 @@ router.post('/:id/action', requireAuth, async (req, res) => {
     }
 });
 
+// POST /api/approvals/sync
+router.post('/sync', requireAuth, async (req, res) => {
+    try {
+        const role = req.user.role?.toLowerCase() || '';
+        if (role !== 'admin' && role !== 'super_admin' && role !== 'superadmin') {
+            return res.status(403).json({ error: "Forbidden: Only administrators can sync stuck documents" });
+        }
+
+        const result = await ApprovalService.syncStuckDocuments();
+        res.json(result);
+    } catch (err) {
+        console.error("Sync Approvals Error:", err);
+        res.status(500).json({ error: "Failed to synchronize stuck approvals" });
+    }
+});
+
 export default router;

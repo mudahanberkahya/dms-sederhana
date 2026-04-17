@@ -30,16 +30,47 @@ export const ApprovalService = {
         const userDepartment = currentUserProfile?.department || null;
         const isAdmin = currentUserProfile?.role === 'admin';
 
-        // Find if this user is a delegate for anyone who is absent
-        const delegatedUserRes = await db.select({ id: userProfile.userId })
+        // Find if this user is a delegate for anyone who is absent, and grab their roles/branches
+        const delegatedUserRes = await db.select({ 
+            id: userProfile.userId,
+            role: user.role,
+            branches: userProfile.branches,
+            department: userProfile.department
+        })
             .from(userProfile)
+            .innerJoin(user, eq(userProfile.userId, user.id))
             .where(
                 and(
                     eq(userProfile.delegatedToUserId, userId),
                     eq(userProfile.isAbsent, true)
                 )
             );
+        
         const absentUserIdsForWhichIAmDelegate = delegatedUserRes.map(r => r.id);
+
+        const currentUserPooledCondition = and(
+            isNull(approval.assignedUserId),
+            eq(approval.roleRequired, role),
+            isAdmin ? sql`true` : (userBranches.length > 0 ? inArray(document.branch, userBranches) : sql`false`),
+            role.toLowerCase() === 'hod' && userDepartment ? sql`COALESCE(${approval.targetDepartment}, ${document.department}) = ${userDepartment}` : sql`true`
+        );
+
+        const delegatePooledConditions = delegatedUserRes.map(del => {
+            const delIsAdmin = del.role === 'admin';
+            const safeRole = del.role || '';
+            const delBranches = del.branches || [];
+            
+            return and(
+                isNull(approval.assignedUserId),
+                eq(approval.roleRequired, safeRole),
+                delIsAdmin ? sql`true` : (delBranches.length > 0 ? inArray(document.branch, delBranches) : sql`false`),
+                safeRole.toLowerCase() === 'hod' && del.department ? sql`COALESCE(${approval.targetDepartment}, ${document.department}) = ${del.department}` : sql`true`
+            );
+        });
+
+        const combinedPooledCondition = delegatePooledConditions.length > 0
+            ? or(currentUserPooledCondition, ...delegatePooledConditions)
+            : currentUserPooledCondition;
 
         const conditions = [
             eq(approval.status, 'PENDING'),
@@ -50,13 +81,8 @@ export const ApprovalService = {
                 absentUserIdsForWhichIAmDelegate.length > 0
                     ? inArray(approval.assignedUserId, absentUserIdsForWhichIAmDelegate)
                     : sql`false`,
-                // 3. Pooled: unassigned, matches my role, matches my branches (or I am admin), AND if HOD, matches my department
-                and(
-                    isNull(approval.assignedUserId),
-                    eq(approval.roleRequired, role),
-                    isAdmin ? sql`true` : (userBranches.length > 0 ? inArray(document.branch, userBranches) : sql`false`),
-                    role.toLowerCase() === 'hod' && userDepartment ? sql`COALESCE(${approval.targetDepartment}, ${document.department}) = ${userDepartment}` : sql`true`
-                )
+                // 3. Pooled for me OR for anyone I am a delegate for
+                combinedPooledCondition
             )
         ];
 
@@ -438,5 +464,42 @@ export const ApprovalService = {
             // This throw will be caught by the route handler and returned as 500 error
             throw err;
         }
+    },
+
+    /**
+     * Re-calculates and re-assigns user routing for all documents stuck on PENDING step
+     * Used for forcing synchronization on role/department changes
+     */
+    async syncStuckDocuments() {
+        return await db.transaction(async (tx) => {
+            // Find all approval steps that are PENDING but belong to a currently PENDING document
+            const stuckApprovals = await tx.select({
+                step: approval,
+                doc: document
+            })
+            .from(approval)
+            .innerJoin(document, eq(approval.documentId, document.id))
+            .where(
+                and(
+                    eq(approval.status, 'PENDING'),
+                    eq(document.status, 'PENDING')
+                )
+            );
+
+            let syncCount = 0;
+            for (const { step, doc } of stuckApprovals) {
+                // Re-assign step using current user profiles
+                await ApprovalService.assignStepToUser(
+                    tx, 
+                    step.id, 
+                    step.roleRequired, 
+                    doc.branch, 
+                    step.targetDepartment || doc.department
+                );
+                syncCount++;
+            }
+            
+            return { message: `Successfully synchronized ${syncCount} pending approval steps.` };
+        });
     }
 };

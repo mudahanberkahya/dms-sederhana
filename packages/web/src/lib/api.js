@@ -99,7 +99,8 @@ export const api = {
         action: (id, actionType, comment) => fetchApi(`/approvals/${id}/action`, {
             method: 'POST',
             body: JSON.stringify({ action: actionType, comment })
-        })
+        }),
+        sync: () => fetchApi('/approvals/sync', { method: 'POST' })
     },
 
     admin: {

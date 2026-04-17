@@ -12,7 +12,8 @@ import {
     Loader2,
     FileUp,
     UserPlus,
-    Settings2
+    Settings2,
+    RefreshCw
 } from 'lucide-react';
 import './Dashboard.css';
 
@@ -48,6 +49,7 @@ export default function Dashboard() {
         total: 0
     });
     const [loading, setLoading] = useState(true);
+    const [syncing, setSyncing] = useState(false);
 
     useEffect(() => {
         const fetchDashboardData = async () => {
@@ -149,13 +151,37 @@ export default function Dashboard() {
         }
     ];
 
+    const handleSyncDocuments = async () => {
+        if (!window.confirm("Simulasi ulang penugasan dokumen yang tersangkut. Tindakan ini aman namun memerlukan sedikit proses. Lanjutkan?")) return;
+        setSyncing(true);
+        try {
+            const res = await api.approvals.sync();
+            alert(res.message || "Sinkronisasi berhasil.");
+            window.location.reload();
+        } catch (err) {
+            alert(err.message || "Gagal melakukan sinkronisasi dokumen.");
+        } finally {
+            setSyncing(false);
+        }
+    };
+
     return (
         <div className="dashboard">
-            <div className="page-header">
+            <div className="page-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                 <div>
                     <h1 className="page-title">Dashboard</h1>
                     <p className="page-subtitle">Welcome back, {user?.name.split(' ')[0] || 'User'}!</p>
                 </div>
+                {(user?.role?.toLowerCase() === 'admin' || user?.role?.toLowerCase() === 'super_admin' || user?.role?.toLowerCase() === 'superadmin') && (
+                    <button 
+                        className="btn btn-outline"
+                        onClick={handleSyncDocuments}
+                        disabled={syncing}
+                    >
+                        <RefreshCw size={18} className={syncing ? "icon-spin" : ""} />
+                        <span>{syncing ? 'Syncing...' : 'Sync Stuck Documents'}</span>
+                    </button>
+                )}
             </div>
 
             {/* Stats Grid */}
