@@ -313,6 +313,13 @@ export const ApprovalService = {
                         const candidates = exactStepResults.length > 0 ? exactStepResults : kwResults;
                         const kw = candidates.find(k => k.branch === doc.branch) || candidates.find(k => k.branch === 'All');
 
+                        // Determine if current acting user is a delegatee (different role or explicitly delegated)
+                        const [actingUser] = await tx.select().from(user).where(eq(user.id, userId)).limit(1);
+                        let delegateNameToStamp = '';
+                        if (currentStep.delegatedFromUserId || actingUser.role !== currentStep.roleRequired) {
+                            delegateNameToStamp = actingUser.name;
+                        }
+
                         if (kw) {
                             const trimmedKeyword = kw.keyword.trim();
                             const inputPath = doc.signedFilePath || doc.filePath;
@@ -337,7 +344,8 @@ export const ApprovalService = {
                                 trimmedKeyword,
                                 kw.positionHint,
                                 kw.offset_x,
-                                kw.offset_y
+                                kw.offset_y,
+                                delegateNameToStamp
                             );
                             stampedFilePath = outputPath;
 

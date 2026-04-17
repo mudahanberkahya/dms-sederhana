@@ -18,7 +18,7 @@ export const PdfService = {
      * Paths from the database may be relative (e.g. "storage/signatures/file.png")
      * so we resolve them relative to the server package root (process.cwd()).
      */
-    async stampSignature(inputPdfPath, outputPdfPath, signatureImagePath, keyword, positionHint = 'Above', offsetX = 0, offsetY = 0) {
+    async stampSignature(inputPdfPath, outputPdfPath, signatureImagePath, keyword, positionHint = 'Above', offsetX = 0, offsetY = 0, delegateName = '') {
         try {
             // Resolve absolute paths — DB stores relative paths like "storage/..."
             let inputAbs = inputPdfPath;
@@ -90,6 +90,11 @@ export const PdfService = {
                 '--offset_y',
                 String(offsetY || 0)
             ];
+
+            if (delegateName) {
+                args.push('--delegate_name');
+                args.push(delegateName);
+            }
 
             const { stdout, stderr } = await execFileAsync('python', args);
 

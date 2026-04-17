@@ -73,6 +73,11 @@ router.get('/:id', requireAuth, async (req, res) => {
         if (!doc) {
             return res.status(404).json({ error: "Document not found" });
         }
+        // Add authorization to approve flag based on pending list logic
+        const { ApprovalService } = await import('../services/approval.service.js');
+        const pendingApprovals = await ApprovalService.getPendingApprovals(req.user.id, req.user.role || '');
+        doc.canIApprove = pendingApprovals.some(p => p.documentId === doc.id);
+
         res.json(doc);
     } catch (err) {
         console.error("Get Document Error:", err);

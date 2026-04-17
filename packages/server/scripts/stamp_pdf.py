@@ -3,7 +3,7 @@ import os
 import fitz  # PyMuPDF
 import argparse
 
-def stamp_pdf(input_pdf_path, output_pdf_path, signature_image_path, keyword, position_hint='Above', offset_x=0, offset_y=0):
+def stamp_pdf(input_pdf_path, output_pdf_path, signature_image_path, keyword, position_hint='Above', offset_x=0, offset_y=0, delegate_name=""):
     """
     Stamps a PNG signature image onto a PDF near a target keyword.
     
@@ -105,6 +105,15 @@ def stamp_pdf(input_pdf_path, output_pdf_path, signature_image_path, keyword, po
                 
                 # Insert the signature image
                 page.insert_image(stamp_rect, filename=signature_image_path)
+                
+                # Add delegation text if provided
+                if delegate_name and delegate_name.strip():
+                    text = f"a.n. {delegate_name}"
+                    text_x = stamp_rect.x0
+                    text_y = stamp_rect.y1 + 10 # 10px below the image bottom
+                    # Ensure font is small enough (removed explicit fontname which caused PyMuPDF parsing errors on windows)
+                    page.insert_text(fitz.Point(text_x, text_y), text, fontsize=9, fill=(0.1, 0.1, 0.1))
+                
                 found = True
                 break  # Stamp once per keyword occurrence
                 
@@ -139,6 +148,7 @@ if __name__ == "__main__":
     parser.add_argument("--pos", default="Above")
     parser.add_argument("--offset_x", type=int, default=0)
     parser.add_argument("--offset_y", type=int, default=0)
+    parser.add_argument("--delegate_name", type=str, default="")
 
     args = parser.parse_args()
-    stamp_pdf(args.in_pdf, args.out_pdf, args.sig_img, args.kw, args.pos, args.offset_x, args.offset_y)
+    stamp_pdf(args.in_pdf, args.out_pdf, args.sig_img, args.kw, args.pos, args.offset_x, args.offset_y, args.delegate_name)

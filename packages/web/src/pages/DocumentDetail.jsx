@@ -120,6 +120,8 @@ export default function DocumentDetail() {
         if (!currentStep) return false;
         // Admin can always approve
         if (user.role === 'admin' || user.role === 'super_admin') return true;
+        // Backend authorized approval check applies explicitly here (solves delegation issues)
+        if (docData.canIApprove) return true;
         // Assigned user can approve
         if (currentStep.assignedUserId === user.id) return true;
         // Unassigned step matching user role
