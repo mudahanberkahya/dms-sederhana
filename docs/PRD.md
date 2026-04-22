@@ -44,6 +44,7 @@ DMS mengelola siklus hidup dokumen dari pengajuan awal hingga disetujui, mencaku
 - **FR.1.4**: Sistem harus membuatkan Document ID unik secara otomatis menggunakan pola `[KODE_KATEGORI]-[TAHUN]-[NOMOR_TRANSAKSI]` (Contoh: `PO-2026-0042`).
 - **FR.1.5**: Dokumen baru langsung dimasukkan ke status `PENDING` dan masuk ke rantai persetujuan berdasarkan kategori dan cabang.
 - **FR.1.6**: Daftar dokumen diurutkan dengan status `PENDING` terlebih dahulu, kemudian `APPROVED`, lalu `REJECTED` — memastikan dokumen yang memerlukan aksi selalu terlihat di posisi atas.
+- **FR.1.7**: **(Document Generation / DocGen)**: Sistem harus mengizinkan pengguna *generate* dokumen baku melalui ekstensi form *Template* di UI Create Document. Sistem secara mandiri mengisi variabel-variabel input ke kerangka PDF dasar yang dibawakan template. Fitur ini secara otomatis menghitung *sum* seluruh properti harga dan mewajibkan pengguna mengisi "Judul Dokumen" untuk disatukan dengan Nama Template. Jika PDF AST corrupt akibat *flattening*, ia harus mampu menggunakan skema fallback otomatis ke *Read-Only lock*.
 
 ### 3.2 Alur Persetujuan Bertingkat (Workflow Validation)
 - **FR.2.1**: Sistem harus memproses alur persetujuan secara linier (step-by-step). Langkah selanjutnya hanya aktif jika langkah sebelumnya telah disetujui (Status langkah sebelumnya menjadi `APPROVED`).
@@ -67,6 +68,7 @@ DMS mengelola siklus hidup dokumen dari pengajuan awal hingga disetujui, mencaku
 - **FR.5.2**: Admin dapat mengunggah file tanda tangan PNG untuk tiap pengguna yang memiliki hak approval.
 - **FR.5.3**: Admin dapat mendefinisikan dan merubah Alur Persetujuan (Workflow Configuration) yang terdiri dari sejumlah "Step".
 - **FR.5.4**: Admin dapat menghapus dokumen yang tidak diperlukan (hard delete).
+- **FR.5.5**: **(Template Management)**: Administrator dapat mengunggah PDF Dasar beserta *Fields Configuration* berbasis JSON untuk menyetel kerangka *DocGen* secara fleksibel. Pengaturan ini mensterilisasi key tanpa izin dan menyediakan rendering *readonly*.
 
 ## 4. Penutup (Non-Functional Requirements)
 

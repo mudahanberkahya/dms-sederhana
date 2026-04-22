@@ -225,7 +225,8 @@ async function main() {
     const files = [
         { md: 'MASTER_DOCUMENTATION.md', docx: 'MASTER_DOCUMENTATION.docx', title: 'DMS Master Documentation' },
         { md: 'PANDUAN_PENGGUNAAN.md', docx: 'PANDUAN_PENGGUNAAN.docx', title: 'Panduan Penggunaan DMS' },
-        { md: 'PRD.md', docx: 'PRD.docx', title: 'Product Requirements Document (PRD)' }
+        { md: 'PRD.md', docx: 'PRD.docx', title: 'Product Requirements Document (PRD)' },
+        { md: 'PRODUCT_SPECIFICATION.md', docx: 'PRODUCT_SPECIFICATION.docx', title: 'Product Specification Document' }
     ];
 
     for (const file of files) {

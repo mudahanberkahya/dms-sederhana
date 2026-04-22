@@ -188,6 +188,7 @@ Database menggunakan **PostgreSQL** dengan **Drizzle ORM**. Schema didefinisikan
 | `approval` | Instance approval per dokumen (status, assignedUser, delegasi) |
 | `signature` | Gambar tanda tangan digital (PNG) per user |
 | `keyword_mapping` | Mapping keyword→role untuk penempatan signature otomatis pada PDF |
+| `document_template` | **DocGen:** Konfigurasi form dan template PDF dasar untuk pembuatan otomatis. |
 | `activity_log` | Log aktivitas sistem (upload, approval, etc.) |
 
 ### Entity Relationship
@@ -254,7 +255,8 @@ Base URL: `http://localhost:3001/api`
 |--------|------|-----------|
 | GET | `/api/documents` | Daftar semua dokumen (urut: PENDING → APPROVED → REJECTED) |
 | GET | `/api/documents/:id` | Detail dokumen + approval chain |
-| POST | `/api/documents` | Upload dokumen baru (multipart/form-data) |
+| POST | `/api/documents` | Upload dokumen baru secara manual (multipart/form-data) |
+| POST | `/api/documents/generate` | Generate dokumen melalui _Template Base_ (JSON). Mengekstrak `documentTitle`, menempelkannya ke nama template, melakukan injeksi PDF, lalu auto-summing. Apabila Flatten AST rusak, dialihkan via fallbacks _Read-Only locking_ secara reliabel 100%. |
 | DELETE | `/api/documents/:id` | Hapus dokumen **(Admin only)** |
 
 ### Approvals
@@ -293,6 +295,16 @@ Base URL: `http://localhost:3001/api`
 | GET | `/api/admin/keywords` | Daftar keyword mappings |
 | POST | `/api/admin/keywords` | Tambah keyword mapping |
 | DELETE | `/api/admin/keywords/:id` | Hapus keyword mapping |
+
+### Admin — Templates (DocGen)
+
+| Method | Path | Deskripsi |
+|--------|------|-----------|
+| GET | `/api/admin/templates` | Daftar semua konfigurasi template PDF |
+| GET | `/api/admin/templates/active` | Daftar template aktif (diperuntukkan kepada UI Form Staf) |
+| POST | `/api/admin/templates` | Upload / konfigurasikan form dasar template baru |
+| PUT | `/api/admin/templates/:id` | Update status `isActive` template |
+| DELETE | `/api/admin/templates/:id` | Hapus template permanently |
 
 ### Admin — Activity Logs
 

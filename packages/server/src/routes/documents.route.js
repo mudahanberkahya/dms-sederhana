@@ -4,12 +4,13 @@ import { DocumentService } from '../services/document.service.js';
 import { WorkflowService } from '../services/workflow.service.js';
 import { LogService } from '../services/log.service.js';
 import { db } from '../db/index.js';
-import { userProfile } from '../db/schema.js';
+import { userProfile, documentTemplate } from '../db/schema.js';
 import { eq } from 'drizzle-orm';
 import multer from 'multer';
 import crypto from 'crypto';
 import path from 'path';
 import fs from 'fs';
+import { PDFDocument } from 'pdf-lib';
 
 const router = express.Router();
 
@@ -197,6 +198,128 @@ router.post('/', requireAuth, upload.single('documentFile'), async (req, res) =>
             }
         }
         res.status(500).json({ error: err.message || "Failed to create document" });
+    }
+});
+
+// POST /api/documents/generate (Generate document from template)
+router.post('/generate', requireAuth, async (req, res) => {
+    try {
+        // Assume req.body contains JSON payload since multer is not used here for files
+        const { templateId, formData, documentTitle, title, category, branch, department, notes, subCategory } = req.body;
+        
+        let dynamicDepartments = [];
+        try {
+            if (req.body.dynamicDepartments) {
+                dynamicDepartments = typeof req.body.dynamicDepartments === 'string' ? JSON.parse(req.body.dynamicDepartments) : req.body.dynamicDepartments;
+            }
+        } catch (err) {
+            console.warn("Failed to parse dynamicDepartments", err);
+        }
+
+        if (!templateId || !category || !branch) {
+            return res.status(400).json({ error: "Missing required fields: templateId, category, branch" });
+        }
+
+        // Branch access validation
+        const userRole = req.user.role?.toLowerCase() || '';
+        if (userRole !== 'admin' && userRole !== 'super_admin') {
+            const [profile] = await db.select().from(userProfile).where(eq(userProfile.userId, req.user.id)).limit(1);
+            const allowedBranches = profile?.branches || [];
+            if (!allowedBranches.includes(branch)) {
+                return res.status(403).json({ error: `Forbidden: You are not authorized to upload documents for branch "${branch}".` });
+            }
+        }
+
+        const [template] = await db.select().from(documentTemplate).where(eq(documentTemplate.id, templateId));
+        if (!template) {
+            return res.status(404).json({ error: "Template not found" });
+        }
+        if (!fs.existsSync(template.filePath)) {
+            return res.status(404).json({ error: "Physical template file is missing on the server" });
+        }
+
+        const combinedTitle = `${template.name} - ${documentTitle || 'Untitled'}`;
+
+        // Load PDF and Form
+        const pdfBytes = fs.readFileSync(template.filePath);
+        const pdfDoc = await PDFDocument.load(pdfBytes);
+        const form = pdfDoc.getForm();
+        
+        // Fill data
+        if (formData && typeof formData === 'object') {
+            for (const [key, value] of Object.entries(formData)) {
+                try {
+                    const field = form.getTextField(key);
+                    if (field) {
+                        field.setText(value || '');
+                    }
+                } catch(e) {
+                    console.warn(`Could not set field ${key}:`, e.message);
+                }
+            }
+        }
+
+        let flatPdfBytes;
+        try {
+            form.flatten();
+            flatPdfBytes = await pdfDoc.save();
+        } catch (flattenErr) {
+            console.warn("Form flatenning failed, falling back to read-only reloading:", flattenErr.message);
+            // Reload PDF from scratch because the previous pdfDoc is now corrupted by the failed flatten()
+            const fallbackDoc = await PDFDocument.load(pdfBytes);
+            const fallbackForm = fallbackDoc.getForm();
+            
+            // Re-fill the fields safely
+            if (formData && typeof formData === 'object') {
+                for (const [key, value] of Object.entries(formData)) {
+                    try {
+                        const field = fallbackForm.getTextField(key);
+                        if (field) field.setText(value || '');
+                    } catch(e) {}
+                }
+            }
+
+            // Apply read-only instead of flattening
+            try {
+                const fields = fallbackForm.getFields();
+                fields.forEach(f => f.enableReadOnly());
+            } catch (e) {
+                console.warn("Failed to apply read-only fallback:", e.message);
+            }
+            
+            flatPdfBytes = await fallbackDoc.save();
+        }
+
+        const pendingPath = path.join(process.env.DOCUMENT_STORAGE_PATH || './storage/documents', 'pending');
+        if (!fs.existsSync(pendingPath)) {
+            fs.mkdirSync(pendingPath, { recursive: true });
+        }
+
+        const timestamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19);
+        const safeTitle = combinedTitle.replace(/[^a-zA-Z0-9_ -]/g, '').substring(0, 60);
+        const filename = `${safeTitle.replace(/\s+/g, '_')}_${timestamp}.pdf`;
+        const generatedPath = path.join(pendingPath, filename);
+
+        fs.writeFileSync(generatedPath, flatPdfBytes);
+
+        const data = {
+            title: combinedTitle,
+            category,
+            subCategory: subCategory || null,
+            branch,
+            department: department || null,
+            notes: notes || null,
+            filePath: generatedPath,
+            originalName: filename,
+            uploadedBy: req.user.id,
+            dynamicDepartments
+        };
+
+        const newDoc = await DocumentService.createDocument(data);
+        res.status(201).json(newDoc);
+    } catch (err) {
+        console.error("Generate Document Error:", err);
+        res.status(500).json({ error: err.message || "Failed to generate document" });
     }
 });
 

@@ -1,4 +1,4 @@
-import { pgTable, text, integer, timestamp, boolean, uuid, varchar } from "drizzle-orm/pg-core";
+import { pgTable, text, integer, timestamp, boolean, uuid, varchar, json } from "drizzle-orm/pg-core";
 import { sql } from "drizzle-orm";
 
 // ==========================================
@@ -172,4 +172,17 @@ export const activityLog = pgTable("activity_log", {
     details: text("details").notNull(),                     // Human-readable summary e.g. "Nawawi uploaded Monthly_Tax_Report_Q3.pdf"
     metadata: text("metadata"),                             // Optional JSON blob for extra context
     createdAt: timestamp("created_at").defaultNow().notNull()
+});
+
+// ==========================================
+// DOCUMENT GENERATION TEMPLATE TABLE
+// ==========================================
+export const documentTemplate = pgTable("document_template", {
+    id: uuid("id").defaultRandom().primaryKey(),
+    name: varchar("name", { length: 255 }).notNull(),
+    filePath: text("file_path").notNull(),
+    fieldsConfig: json("fields_config"), // JSON array of fields e.g [{name: "to", label: "To", type: "text"}]
+    isActive: boolean("is_active").default(true).notNull(),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+    updatedAt: timestamp("updated_at").defaultNow().notNull()
 });

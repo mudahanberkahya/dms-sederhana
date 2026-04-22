@@ -34,6 +34,7 @@ const adminNav = [
     { label: 'Departments', icon: Building2, path: '/admin/departments' },
     { label: 'Signatures', icon: PenTool, path: '/admin/signatures' },
     { label: 'Workflows', icon: GitBranch, path: '/admin/workflows' },
+    { label: 'Templates', icon: FileText, path: '/admin/templates' },
     { label: 'Keywords', icon: Search, path: '/admin/keywords' },
     { label: 'Delegation', icon: UserRoundCog, path: '/admin/delegation' },
     { label: 'Audit Trail', icon: ClipboardList, path: '/admin/audit-trail' },

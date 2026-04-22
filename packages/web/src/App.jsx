@@ -19,6 +19,7 @@ import Categories from './pages/Categories';
 import Departments from './pages/Departments';
 import Settings from './pages/Settings';
 import AuditTrail from './pages/AuditTrail';
+import Templates from './pages/Templates';
 import ErrorBoundary from './components/ErrorBoundary';
 import './App.css';
 
@@ -144,6 +145,7 @@ function App() {
                   <Route path="/admin/roles" element={<Roles />} />
                   <Route path="/admin/categories" element={<Categories />} />
                   <Route path="/admin/departments" element={<Departments />} />
+                  <Route path="/admin/templates" element={<Templates />} />
                   <Route path="/admin/audit-trail" element={<AuditTrail />} />
                 </Route>
               </Route>

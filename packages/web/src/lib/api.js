@@ -77,7 +77,11 @@ export const api = {
             return data;
         }),
         delete: (id) => fetchApi(`/documents/${id}`, { method: 'DELETE' }),
-        getFileBlob: (id) => fetchBlob(`/documents/${id}/file`)
+        getFileBlob: (id) => fetchBlob(`/documents/${id}/file`),
+        generate: (payload) => fetchApi('/documents/generate', {
+            method: 'POST',
+            body: JSON.stringify(payload)
+        })
     },
 
     approvals: {
@@ -187,6 +191,24 @@ export const api = {
                 body: JSON.stringify(payload)
             }),
             delete: (id) => fetchApi(`/admin/departments/${id}`, { method: 'DELETE' })
+        },
+        templates: {
+            list: () => fetchApi('/admin/templates'),
+            active: () => fetchApi('/admin/templates/active'),
+            upload: (formData) => fetch(`${API_BASE_URL}/admin/templates`, {
+                method: 'POST',
+                body: formData,
+                credentials: 'include'
+            }).then(async res => {
+                const data = await res.json();
+                if (!res.ok) throw new Error(data.error || res.statusText);
+                return data;
+            }),
+            update: (id, payload) => fetchApi(`/admin/templates/${id}`, {
+                method: 'PUT',
+                body: JSON.stringify(payload)
+            }),
+            delete: (id) => fetchApi(`/admin/templates/${id}`, { method: 'DELETE' })
         }
     },
 

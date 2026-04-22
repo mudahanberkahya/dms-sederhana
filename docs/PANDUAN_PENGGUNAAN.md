@@ -120,14 +120,21 @@ Gunakan dropdown di toolbar:
 
 Halaman Upload (`/documents/upload`) menggunakan **wizard 3 langkah**.
 
-### Step 1: Upload File
+### Step 1: Upload File atau Generate Template
 
-1. **Drag & Drop** file PDF ke area drop zone, **atau**
-2. Klik tombol **"Browse Files"** untuk memilih file
-3. Hanya file **PDF** yang diterima (maks. 25MB)
-4. Setelah file terpilih, informasi file (nama + ukuran) akan ditampilkan
-5. Klik tombol ❌ untuk menghapus file dan memilih ulang
-6. Klik **"Continue"** untuk lanjut ke langkah berikutnya
+Di halaman Upload ini, terdapat dua mode pembuatan dokumen yang bisa Anda pilih:
+
+**Mode 1: Upload Existing PDF (Manual):**
+1. **Drag & Drop** file PDF yang sudah jadi ke area drop zone, **atau** klik tombol **"Browse Files"**
+2. Hanya file **PDF** yang diterima (maks. 25MB).
+
+**Mode 2: Generate from Template (Otomatis):**
+1. Pilih **Base Template** yang telah dikonfigurasi oleh Administrator (misalnya: *Internal Memo Template*).
+2. Anda **WAJIB** memasukkan **Judul Dokumen (Document Title)** di kolom teratas. Judul ini akan otomatis digabung dengan jenis template sebagai nama akhir file Anda.
+3. Panel input lainnya akan memunculkan isian-*form* spesifik yang menempel di dalam template (seperti "Kepada", "Perihal", "Deskripsi"). Apabila *template* melibatkan properti numerik (seperti Harga), kolom `total_price` akan otomatis dikalkulasikan (Auto-Sum).
+4. Sistem akan menyuntikkan (menggabungkan) isian Anda ke dalam base PDF tersebut lalu mensterilisasi/mengunci strukturnya (Flatten/Read-Only Lock) secara otomatis.
+
+Terakhir, klik **"Continue"** untuk lanjut ke langkah berikutnya.
 
 ### Step 2: Classify Document
 

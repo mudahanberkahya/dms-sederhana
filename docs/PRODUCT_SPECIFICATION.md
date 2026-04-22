@@ -189,6 +189,7 @@ erDiagram
 | `approval` | Approval chain instances | `document_id`, `step_order`, `role_required`, `assigned_user_id`, `status` |
 | `signature` | Digital signature images | `user_id`, `image_path` |
 | `keyword_mapping` | Keyword → signature placement rules | `category`, `role`, `keyword`, `position_hint` |
+| `document_template` | Base templates and mapping config for DocGen | `id`, `name`, `filePath`, `fieldsConfig`, `isActive` |
 
 ### 4.3 Document Status Lifecycle
 
@@ -232,13 +233,14 @@ stateDiagram-v2
 
 **Upload Flow:**
 
-1. User selects a PDF file (drag & drop or browse)
-2. User classifies: Category, Branch, Department + optional Notes
-3. User reviews and submits
-4. System generates unique Display ID
-5. System stores file in `pending/` directory
-6. System creates approval chain based on matching workflow configuration
-7. First approval step activated (`PENDING`), others set to `LOCKED`
+1. User selects a PDF file (drag & drop) OR chooses to "Generate from Template".
+2. If using Template, user inputs mandatory fields mapped via `fieldsConfig` including a "Judul Dokumen" (Document Title). Auto-sum calculations apply for `price_*` keys into `total_price` dynamically.
+3. User classifies: Category, Branch, Department + optional Notes
+4. User reviews and submits
+5. System generates unique Display ID and (for templates) flat-merges variables using `pdf-lib` (falling back to Read-Only properties if PDF AST flatten fails).
+6. System stores file in `pending/` directory with physical filename combining Template Name + Document Title.
+7. System creates approval chain based on matching workflow configuration
+8. First approval step activated (`PENDING`), others set to `LOCKED`
 
 ---
 
@@ -604,6 +606,7 @@ packages/server/storage/
 | BR-03 | Every document must have a Category and Branch |
 | BR-04 | Document IDs are auto-generated and unique (`[CODE]-[YEAR]-[SEQ]`) |
 | BR-05 | A document enters the system with status `PENDING` |
+| BR-05b| Automatically generated template documents must supply a custom "Document Title", which is concatenated with the Template's name as the final display and file identifier. |
 
 ### 11.2 Approval Rules
 

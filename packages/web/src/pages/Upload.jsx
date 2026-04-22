@@ -8,27 +8,49 @@ import {
     CheckCircle2,
     X,
     CloudUpload,
-    Loader2
+    Loader2,
+    LayoutTemplate
 } from 'lucide-react';
 import './Upload.css';
 
-const steps = ['Upload File', 'Classify Document', 'Review & Submit'];
+const steps = ['Initialization', 'Classify Document', 'Review & Submit'];
 
 export default function Upload() {
     const { categories, userBranches, userDepartment, user, departments } = useContext(AppContext);
     const navigate = useNavigate();
     const [currentStep, setCurrentStep] = useState(0);
+    
+    // Mode Selection: manual or template
+    const [uploadMode, setUploadMode] = useState('manual');
+    
+    // Manual State
     const [file, setFile] = useState(null);
+    
+    // Template State
+    const [availableTemplates, setAvailableTemplates] = useState([]);
+    const [selectedTemplateId, setSelectedTemplateId] = useState('');
+    const [documentTitle, setDocumentTitle] = useState('');
+    const [templateFormData, setTemplateFormData] = useState({});
+
+    // Classification State
     const [category, setCategory] = useState('');
     const [subCategory, setSubCategory] = useState('');
     const [subCategories, setSubCategories] = useState([]);
     const [branch, setBranch] = useState(userBranches?.[0] || 'Astara Hotel');
     const [department, setDepartment] = useState(userDepartment || 'GENERAL');
     const [notes, setNotes] = useState('');
-    const [isUploading, setIsUploading] = useState(false);
-    const [error, setError] = useState('');
     const [workflowPreview, setWorkflowPreview] = useState(null);
     const [dynamicDepts, setDynamicDepts] = useState({});
+
+    const [isUploading, setIsUploading] = useState(false);
+    const [error, setError] = useState('');
+
+    useEffect(() => {
+        // Fetch templates
+        api.admin.templates.active()
+            .then(data => setAvailableTemplates(data || []))
+            .catch(err => console.error('Failed to load templates', err));
+    }, []);
 
     // Fetch sub-categories when category changes
     useEffect(() => {
@@ -59,6 +81,31 @@ export default function Upload() {
         }
     }, [category, branch, subCategory]);
 
+    // Auto-calculate total_price for template generation
+    const activeTemplate = availableTemplates.find(t => t.id === selectedTemplateId);
+    
+    useEffect(() => {
+        if (!activeTemplate || !activeTemplate.fieldsConfig) return;
+
+        const hasTotalPriceField = activeTemplate.fieldsConfig.some(f => f.name === 'total_price' || f.type === 'readonly');
+        if (!hasTotalPriceField) return;
+
+        let totalSum = 0;
+        for (const [key, value] of Object.entries(templateFormData)) {
+            if (key.startsWith('price_')) {
+                const numVal = parseFloat(value) || 0;
+                totalSum += numVal;
+            }
+        }
+
+        let targetField = activeTemplate.fieldsConfig.find(f => f.name === 'total_price' || f.type === 'readonly')?.name;
+        if (!targetField || targetField === 'undefined') targetField = 'total_price';
+
+        if (templateFormData[targetField] !== String(totalSum)) {
+            setTemplateFormData(prev => ({ ...prev, [targetField]: String(totalSum) }));
+        }
+    }, [templateFormData, activeTemplate]);
+
     const next = () => {
         if (currentStep === 1) {
             // Validate dynamic departments
@@ -73,42 +120,69 @@ export default function Upload() {
         if (currentStep < 2) setCurrentStep(currentStep + 1);
         setError('');
     };
+
     const prev = () => {
         if (currentStep > 0) setCurrentStep(currentStep - 1);
         setError('');
     };
+
     const submit = async () => {
-        if (!file || !category) return;
+        if (uploadMode === 'manual' && (!file || !category)) return;
+        if (uploadMode === 'template' && (!selectedTemplateId || !category)) return;
+
+        if (uploadMode === 'template' && !documentTitle.trim()) {
+            setError('Isian Judul Dokumen (Document Title) wajib diisi.');
+            return;
+        }
+
         setIsUploading(true);
         setError('');
 
         try {
-            const formData = new FormData();
-            formData.append('documentFile', file);
-            formData.append('title', file.name);
-            formData.append('category', category);
-            formData.append('branch', branch);
-            formData.append('department', department);
-            if (subCategory) formData.append('subCategory', subCategory);
-            if (notes) formData.append('notes', notes);
-            
-            if (Object.keys(dynamicDepts).length > 0) {
-                const mapArr = Object.keys(dynamicDepts).map(order => ({ stepOrder: parseInt(order), department: dynamicDepts[order] }));
-                formData.append('dynamicDepartments', JSON.stringify(mapArr));
+            if (uploadMode === 'manual') {
+                const formData = new FormData();
+                formData.append('documentFile', file);
+                formData.append('title', file.name);
+                formData.append('category', category);
+                formData.append('branch', branch);
+                formData.append('department', department);
+                if (subCategory) formData.append('subCategory', subCategory);
+                if (notes) formData.append('notes', notes);
+                
+                if (Object.keys(dynamicDepts).length > 0) {
+                    const mapArr = Object.keys(dynamicDepts).map(order => ({ stepOrder: parseInt(order), department: dynamicDepts[order] }));
+                    formData.append('dynamicDepartments', JSON.stringify(mapArr));
+                }
+
+                await api.documents.upload(formData);
+            } else {
+                const activeTpl = availableTemplates.find(t => t.id === selectedTemplateId);
+                const payload = {
+                    templateId: selectedTemplateId,
+                    formData: templateFormData,
+                    documentTitle: documentTitle,
+                    title: `${activeTpl?.name}`,
+                    category,
+                    branch,
+                    department,
+                    subCategory: subCategory || undefined,
+                    notes: notes || undefined
+                };
+                if (Object.keys(dynamicDepts).length > 0) {
+                    payload.dynamicDepartments = Object.keys(dynamicDepts).map(order => ({ stepOrder: parseInt(order), department: dynamicDepts[order] }));
+                }
+
+                await api.documents.generate(payload);
             }
 
-            await api.documents.upload(formData);
             navigate('/documents');
         } catch (err) {
-            console.error("Upload failed", err);
-            
-            // Try to extract exact error message from backend
+            console.error("Upload/Generate failed", err);
             let errorMessage = err.message;
             if (err.response && err.response.data) {
                 errorMessage = err.response.data.message || err.response.data.error || err.message;
             }
-            
-            setError(errorMessage || 'Failed to upload document. Please try again.');
+            setError(errorMessage || 'Failed to submit document. Please try again.');
         } finally {
             setIsUploading(false);
         }
@@ -117,14 +191,17 @@ export default function Upload() {
     const handleDrop = (e) => {
         e.preventDefault();
         const f = e.dataTransfer?.files?.[0] || e.target.files?.[0];
-        if (f && f.type === 'application/pdf') setFile(f);
+        if (f && f.type === 'application/pdf') {
+            setFile(f);
+            setUploadMode('manual');
+        }
     };
 
     return (
         <div className="upload-page">
             <div className="page-header">
                 <div>
-                    <h1 className="page-title">Upload Document</h1>
+                    <h1 className="page-title">Create Document</h1>
                     <p className="page-subtitle">Submit a new document for approval</p>
                 </div>
             </div>
@@ -143,37 +220,125 @@ export default function Upload() {
             </div>
 
             <div className="card upload-card">
-                {/* Step 1: Upload */}
+                {/* Step 1: Upload or Template */}
                 {currentStep === 0 && (
                     <div className="upload-step animate-fade-in">
-                        <div
-                            className={`drop-zone ${file ? 'has-file' : ''}`}
-                            onDragOver={(e) => e.preventDefault()}
-                            onDrop={handleDrop}
-                        >
-                            {!file ? (
-                                <>
-                                    <CloudUpload size={48} strokeWidth={1} className="drop-icon" />
-                                    <p className="drop-text">Drag and drop your PDF here</p>
-                                    <span className="drop-hint">or click to browse — Max 25MB</span>
-                                    <label className="btn btn-secondary btn-sm drop-browse">
-                                        Browse Files
-                                        <input type="file" accept=".pdf" hidden onChange={handleDrop} />
-                                    </label>
-                                </>
-                            ) : (
-                                <div className="file-preview">
-                                    <FileText size={32} />
-                                    <div className="file-info">
-                                        <h4>{file.name}</h4>
-                                        <span>{(file.size / 1024).toFixed(1)} KB</span>
-                                    </div>
-                                    <button className="btn-icon" onClick={() => setFile(null)}>
-                                        <X size={18} />
-                                    </button>
-                                </div>
-                            )}
+                        
+                        <div className="mode-switcher" style={{ display: 'flex', gap: '1rem', marginBottom: '2rem', background: 'var(--bg-subtle)', padding: '0.5rem', borderRadius: '12px' }}>
+                            <button
+                                className={`btn ${uploadMode === 'manual' ? 'btn-primary' : 'btn-ghost'}`}
+                                style={{ flex: 1 }}
+                                onClick={() => setUploadMode('manual')}
+                            >
+                                <UploadIcon size={18} style={{ marginRight: '8px' }} /> Upload Existing PDF
+                            </button>
+                            <button
+                                className={`btn ${uploadMode === 'template' ? 'btn-primary' : 'btn-ghost'}`}
+                                style={{ flex: 1 }}
+                                onClick={() => setUploadMode('template')}
+                            >
+                                <LayoutTemplate size={18} style={{ marginRight: '8px' }} /> Generate from Template
+                            </button>
                         </div>
+
+                        {uploadMode === 'manual' ? (
+                            <div
+                                className={`drop-zone ${file ? 'has-file' : ''}`}
+                                onDragOver={(e) => e.preventDefault()}
+                                onDrop={handleDrop}
+                            >
+                                {!file ? (
+                                    <>
+                                        <CloudUpload size={48} strokeWidth={1} className="drop-icon" />
+                                        <p className="drop-text">Drag and drop your PDF here</p>
+                                        <span className="drop-hint">or click to browse — Max 25MB</span>
+                                        <label className="btn btn-secondary btn-sm drop-browse">
+                                            Browse Files
+                                            <input type="file" accept=".pdf" hidden onChange={handleDrop} />
+                                        </label>
+                                    </>
+                                ) : (
+                                    <div className="file-preview">
+                                        <FileText size={32} />
+                                        <div className="file-info">
+                                            <h4>{file.name}</h4>
+                                            <span>{(file.size / 1024).toFixed(1)} KB</span>
+                                        </div>
+                                        <button className="btn-icon" onClick={() => setFile(null)}>
+                                            <X size={18} />
+                                        </button>
+                                    </div>
+                                )}
+                            </div>
+                        ) : (
+                            <div className="template-zone" style={{ padding: '1rem', border: '1px solid var(--border-color)', borderRadius: '12px' }}>
+                                <div className="form-group">
+                                    <label className="form-label">Select Base Template *</label>
+                                    <select 
+                                        className="form-select"
+                                        value={selectedTemplateId} 
+                                        onChange={e => setSelectedTemplateId(e.target.value)}
+                                    >
+                                        <option value="">— Choose a Template —</option>
+                                        {availableTemplates.map(t => (
+                                            <option key={t.id} value={t.id}>{t.name}</option>
+                                        ))}
+                                    </select>
+                                </div>
+
+                                {selectedTemplateId && (
+                                    <div className="form-group" style={{ marginTop: '1.5rem' }}>
+                                        <label className="form-label">Judul Dokumen (Document Title) *</label>
+                                        <input 
+                                            type="text" 
+                                            className="form-input" 
+                                            placeholder="Misal: Pembelian Kursi Operasional"
+                                            value={documentTitle}
+                                            onChange={e => setDocumentTitle(e.target.value)}
+                                        />
+                                        <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '4px' }}>
+                                            Nama ini akan digabung dengan jenis template sebagai nama final file.
+                                        </p>
+                                    </div>
+                                )}
+
+                                {activeTemplate && activeTemplate.fieldsConfig && activeTemplate.fieldsConfig.length > 0 && (
+                                    <div style={{ marginTop: '1.5rem', background: 'var(--bg-card-hover)', padding: '1.5rem', borderRadius: '8px', border: '1px solid var(--border-color)' }}>
+                                        <h4 style={{ marginBottom: '1rem' }}>Template Document Fields</h4>
+                                        <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '1rem' }}>
+                                            {activeTemplate.fieldsConfig.map(field => (
+                                                <div key={field.name} className="form-group" style={{ marginBottom: 0 }}>
+                                                    <label className="form-label">{field.label} {field.required && '*'}</label>
+                                                    {field.type === 'textarea' ? (
+                                                        <textarea 
+                                                            className="form-input" 
+                                                            rows={4}
+                                                            placeholder={`Enter ${field.label}...`}
+                                                            value={templateFormData[field.name] || ''}
+                                                            onChange={e => setTemplateFormData({ ...templateFormData, [field.name]: e.target.value })}
+                                                        />
+                                                    ) : (
+                                                        <input 
+                                                            type={field.type === 'readonly' ? 'text' : field.type || 'text'}
+                                                            className="form-input"
+                                                            placeholder={field.type === 'readonly' || field.name === 'total_price' ? 'Auto calculated...' : `Enter ${field.label}...`}
+                                                            value={templateFormData[field.name] || ''}
+                                                            onChange={e => setTemplateFormData({ ...templateFormData, [field.name]: e.target.value })}
+                                                            readOnly={field.type === 'readonly' || field.name === 'total_price'}
+                                                            style={(field.type === 'readonly' || field.name === 'total_price') ? { backgroundColor: 'var(--bg-subtle)' } : {}}
+                                                        />
+                                                    )}
+                                                </div>
+                                            ))}
+                                        </div>
+                                    </div>
+                                )}
+                                {activeTemplate && (!activeTemplate.fieldsConfig || activeTemplate.fieldsConfig.length === 0) && (
+                                    <p className="text-muted text-center" style={{ marginTop: '1rem' }}>This template requires no direct input data.</p>
+                                )}
+                            </div>
+                        )}
+
                     </div>
                 )}
 
@@ -197,7 +362,7 @@ export default function Upload() {
                             </div>
                         </div>
 
-                        {/* Sub-Category Dropdown — only shown if sub-categories exist for selected category */}
+                        {/* Sub-Category Dropdown */}
                         {subCategories.length > 0 && (
                             <div className="form-group">
                                 <label className="form-label">Document Type / Sub-Category</label>
@@ -292,8 +457,18 @@ export default function Upload() {
                         <h3 className="review-title">Review Before Submitting</h3>
                         <div className="review-grid">
                             <div className="review-item">
-                                <span className="info-label">File</span>
-                                <span className="info-value">{file?.name || 'No file'}</span>
+                                <span className="info-label">Type</span>
+                                <span className="info-value">
+                                    {uploadMode === 'manual' ? 
+                                        <span><UploadIcon size={14} style={{ display: 'inline', verticalAlign: 'middle' }}/> Manual PDF Upload</span> 
+                                        : 
+                                        <span><LayoutTemplate size={14} style={{ display: 'inline', verticalAlign: 'middle' }}/> Generated from Template</span>
+                                    }
+                                </span>
+                            </div>
+                            <div className="review-item">
+                                <span className="info-label">{uploadMode === 'manual' ? 'File' : 'Template'}</span>
+                                <span className="info-value">{uploadMode === 'manual' ? file?.name : activeTemplate?.name}</span>
                             </div>
                             <div className="review-item">
                                 <span className="info-label">Category</span>
@@ -314,7 +489,7 @@ export default function Upload() {
                                 <span className="info-value">{department}</span>
                             </div>
                             {notes && (
-                                <div className="review-item">
+                                <div className="review-item" style={{ gridColumn: '1 / -1' }}>
                                     <span className="info-label">Notes</span>
                                     <span className="info-value">{notes}</span>
                                 </div>
@@ -351,7 +526,11 @@ export default function Upload() {
                         <button
                             className="btn btn-primary"
                             onClick={next}
-                            disabled={currentStep === 0 && !file || currentStep === 1 && !category}
+                            disabled={
+                                (currentStep === 0 && uploadMode === 'manual' && !file) ||
+                                (currentStep === 0 && uploadMode === 'template' && !selectedTemplateId) ||
+                                (currentStep === 1 && !category)
+                            }
                         >
                             Continue
                         </button>
@@ -360,11 +539,11 @@ export default function Upload() {
                             {isUploading ? (
                                 <>
                                     <Loader2 size={16} className="animate-spin" style={{ animation: 'spin 1s linear infinite' }} />
-                                    Uploading...
+                                    {uploadMode === 'template' ? 'Generating...' : 'Uploading...'}
                                 </>
                             ) : (
                                 <>
-                                    <UploadIcon size={16} /> Submit for Approval
+                                    <CheckCircle2 size={16} /> Submit for Approval
                                 </>
                             )}
                         </button>
@@ -374,4 +553,3 @@ export default function Upload() {
         </div>
     );
 }
-
