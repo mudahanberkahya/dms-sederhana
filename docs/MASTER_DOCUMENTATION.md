@@ -188,7 +188,7 @@ Database menggunakan **PostgreSQL** dengan **Drizzle ORM**. Schema didefinisikan
 | `approval` | Instance approval per dokumen (status, assignedUser, delegasi) |
 | `signature` | Gambar tanda tangan digital (PNG) per user |
 | `keyword_mapping` | Mapping keyword→role untuk penempatan signature otomatis pada PDF |
-| `document_template` | **DocGen:** Konfigurasi form dan template PDF dasar untuk pembuatan otomatis. |
+| `document_template` | **DocGen (AcroForm):** Konfigurasi form dan template dasar dari struktur AcroForm bawaan Nitro PDF. |
 | `activity_log` | Log aktivitas sistem (upload, approval, etc.) |
 
 ### Entity Relationship
@@ -256,7 +256,7 @@ Base URL: `http://localhost:3001/api`
 | GET | `/api/documents` | Daftar semua dokumen (urut: PENDING → APPROVED → REJECTED) |
 | GET | `/api/documents/:id` | Detail dokumen + approval chain |
 | POST | `/api/documents` | Upload dokumen baru secara manual (multipart/form-data) |
-| POST | `/api/documents/generate` | Generate dokumen melalui _Template Base_ (JSON). Mengekstrak `documentTitle`, menempelkannya ke nama template, melakukan injeksi PDF, lalu auto-summing. Apabila Flatten AST rusak, dialihkan via fallbacks _Read-Only locking_ secara reliabel 100%. |
+| POST | `/api/documents/generate` | Generate dokumen melalui _Template Base_ (JSON). Mengekstrak `documentTitle`, melakukan injeksi AcroForm natively via pdf-lib, auto-summing, lalu Flatten AST. Support lampiran image (multipart). |
 | DELETE | `/api/documents/:id` | Hapus dokumen **(Admin only)** |
 
 ### Approvals
@@ -296,14 +296,15 @@ Base URL: `http://localhost:3001/api`
 | POST | `/api/admin/keywords` | Tambah keyword mapping |
 | DELETE | `/api/admin/keywords/:id` | Hapus keyword mapping |
 
-### Admin — Templates (DocGen)
+### Admin — Templates (DocGen AcroForm)
 
 | Method | Path | Deskripsi |
 |--------|------|-----------|
 | GET | `/api/admin/templates` | Daftar semua konfigurasi template PDF |
 | GET | `/api/admin/templates/active` | Daftar template aktif (diperuntukkan kepada UI Form Staf) |
-| POST | `/api/admin/templates` | Upload / konfigurasikan form dasar template baru |
-| PUT | `/api/admin/templates/:id` | Update status `isActive` template |
+| POST | `/api/admin/templates/extract-fields` | Mendeteksi Native AcroForm properties dari file upload PDF (Frontend Pre-flight). |
+| POST | `/api/admin/templates` | Upload PDF dan konfigurasikan form dasar template baru (menyertakan urutan/`order` dan `type`). |
+| PUT | `/api/admin/templates/:id` | Update konfigurasi template (Label, Urutan, Formula, Status `isActive`, File Baru). |
 | DELETE | `/api/admin/templates/:id` | Hapus template permanently |
 
 ### Admin — Activity Logs
@@ -585,7 +586,7 @@ npm run preview
 
 ---
 
-> **Catatan**: Dokumentasi ini mencerminkan keadaan sistem per 10 Maret 2026.
+> **Catatan**: Dokumentasi ini mencerminkan keadaan sistem per akhir April 2026.
 > - Untuk rincian kebutuhan bisnis, lihat [PRD (Product Requirements Document)](./PRD.md).
 > - Untuk panduan penggunaan dari perspektif pengguna, lihat [PANDUAN_PENGGUNAAN.md](./PANDUAN_PENGGUNAAN.md).
 > - Untuk spesifikasi produk lengkap, lihat [PRODUCT_SPECIFICATION.md](./PRODUCT_SPECIFICATION.md).

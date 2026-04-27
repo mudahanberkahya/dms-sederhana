@@ -9,8 +9,11 @@ import {
     X,
     CloudUpload,
     Loader2,
-    LayoutTemplate
+    LayoutTemplate,
+    ImagePlus
 } from 'lucide-react';
+import ReactQuill from 'react-quill-new';
+import 'react-quill-new/dist/quill.snow.css';
 import './Upload.css';
 
 const steps = ['Initialization', 'Classify Document', 'Review & Submit'];
@@ -31,6 +34,7 @@ export default function Upload() {
     const [selectedTemplateId, setSelectedTemplateId] = useState('');
     const [documentTitle, setDocumentTitle] = useState('');
     const [templateFormData, setTemplateFormData] = useState({});
+    const [attachmentFiles, setAttachmentFiles] = useState([]);
 
     // Classification State
     const [category, setCategory] = useState('');
@@ -84,25 +88,40 @@ export default function Upload() {
     // Auto-calculate total_price for template generation
     const activeTemplate = availableTemplates.find(t => t.id === selectedTemplateId);
     
+    // Quill toolbar config
+    const quillModules = {
+        toolbar: [
+            ['bold', 'italic', 'underline'],
+            [{ 'size': ['small', false, 'large', 'huge'] }],
+            [{ 'list': 'ordered'}, { 'list': 'bullet' }],
+            ['clean']
+        ]
+    };
+
     useEffect(() => {
         if (!activeTemplate || !activeTemplate.fieldsConfig) return;
 
-        const hasTotalPriceField = activeTemplate.fieldsConfig.some(f => f.name === 'total_price' || f.type === 'readonly');
-        if (!hasTotalPriceField) return;
+        // Find readonly/total_price target field
+        const totalField = activeTemplate.fieldsConfig.find(f => 
+            f.name === 'total_price' || f.name?.includes('total') || f.type === 'readonly'
+        );
+        if (!totalField) return;
+
+        // Sum all number-type fields and fields with 'price' in their name
+        const priceFields = activeTemplate.fieldsConfig.filter(f =>
+            f.type === 'number' || f.name?.toLowerCase().includes('price') || f.name?.toLowerCase().includes('harga')
+        ).filter(f => f.name !== totalField.name); // exclude the total field itself
 
         let totalSum = 0;
-        for (const [key, value] of Object.entries(templateFormData)) {
-            if (key.startsWith('price_')) {
-                const numVal = parseFloat(value) || 0;
-                totalSum += numVal;
-            }
+        for (const pf of priceFields) {
+            const numVal = parseFloat(templateFormData[pf.name]) || 0;
+            totalSum += numVal;
         }
 
-        let targetField = activeTemplate.fieldsConfig.find(f => f.name === 'total_price' || f.type === 'readonly')?.name;
-        if (!targetField || targetField === 'undefined') targetField = 'total_price';
-
-        if (templateFormData[targetField] !== String(totalSum)) {
-            setTemplateFormData(prev => ({ ...prev, [targetField]: String(totalSum) }));
+        const targetName = totalField.name || 'total_price';
+        const formatted = totalSum.toLocaleString('id-ID');
+        if (templateFormData[targetName] !== formatted) {
+            setTemplateFormData(prev => ({ ...prev, [targetName]: formatted }));
         }
     }, [templateFormData, activeTemplate]);
 
@@ -157,22 +176,26 @@ export default function Upload() {
                 await api.documents.upload(formData);
             } else {
                 const activeTpl = availableTemplates.find(t => t.id === selectedTemplateId);
-                const payload = {
-                    templateId: selectedTemplateId,
-                    formData: templateFormData,
-                    documentTitle: documentTitle,
-                    title: `${activeTpl?.name}`,
-                    category,
-                    branch,
-                    department,
-                    subCategory: subCategory || undefined,
-                    notes: notes || undefined
-                };
+                const fd = new FormData();
+                fd.append('templateId', selectedTemplateId);
+                fd.append('formData', JSON.stringify(templateFormData));
+                fd.append('documentTitle', documentTitle);
+                fd.append('title', activeTpl?.name || '');
+                fd.append('category', category);
+                fd.append('branch', branch);
+                fd.append('department', department);
+                if (subCategory) fd.append('subCategory', subCategory);
+                if (notes) fd.append('notes', notes);
                 if (Object.keys(dynamicDepts).length > 0) {
-                    payload.dynamicDepartments = Object.keys(dynamicDepts).map(order => ({ stepOrder: parseInt(order), department: dynamicDepts[order] }));
+                    fd.append('dynamicDepartments', JSON.stringify(
+                        Object.keys(dynamicDepts).map(order => ({ stepOrder: parseInt(order), department: dynamicDepts[order] }))
+                    ));
                 }
-
-                await api.documents.generate(payload);
+                // Attach image files
+                for (const imgFile of attachmentFiles) {
+                    fd.append('attachments', imgFile);
+                }
+                await api.documents.generateWithFiles(fd);
             }
 
             navigate('/documents');
@@ -306,30 +329,58 @@ export default function Upload() {
                                     <div style={{ marginTop: '1.5rem', background: 'var(--bg-card-hover)', padding: '1.5rem', borderRadius: '8px', border: '1px solid var(--border-color)' }}>
                                         <h4 style={{ marginBottom: '1rem' }}>Template Document Fields</h4>
                                         <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '1rem' }}>
-                                            {activeTemplate.fieldsConfig.map(field => (
-                                                <div key={field.name} className="form-group" style={{ marginBottom: 0 }}>
-                                                    <label className="form-label">{field.label} {field.required && '*'}</label>
-                                                    {field.type === 'textarea' ? (
-                                                        <textarea 
-                                                            className="form-input" 
-                                                            rows={4}
-                                                            placeholder={`Enter ${field.label}...`}
-                                                            value={templateFormData[field.name] || ''}
-                                                            onChange={e => setTemplateFormData({ ...templateFormData, [field.name]: e.target.value })}
-                                                        />
-                                                    ) : (
-                                                        <input 
-                                                            type={field.type === 'readonly' ? 'text' : field.type || 'text'}
-                                                            className="form-input"
-                                                            placeholder={field.type === 'readonly' || field.name === 'total_price' ? 'Auto calculated...' : `Enter ${field.label}...`}
-                                                            value={templateFormData[field.name] || ''}
-                                                            onChange={e => setTemplateFormData({ ...templateFormData, [field.name]: e.target.value })}
-                                                            readOnly={field.type === 'readonly' || field.name === 'total_price'}
-                                                            style={(field.type === 'readonly' || field.name === 'total_price') ? { backgroundColor: 'var(--bg-subtle)' } : {}}
-                                                        />
-                                                    )}
-                                                </div>
-                                            ))}
+                                            {[...activeTemplate.fieldsConfig]
+                                                .sort((a, b) => (a.order || 0) - (b.order || 0))
+                                                .map(field => {
+                                                const isReadonly = field.type === 'readonly' || field.name === 'total_price' || field.name?.includes('total');
+                                                const isRichText = field.type === 'textarea' || field.type === 'richtext';
+                                                const displayLabel = field.label || field.name;
+
+                                                return (
+                                                    <div key={field.name} className="form-group" style={{ marginBottom: 0 }}>
+                                                        <label className="form-label">{displayLabel} {field.required && '*'}</label>
+                                                        {isRichText ? (
+                                                            <div style={{ background: '#fff', borderRadius: '8px' }}>
+                                                                <ReactQuill
+                                                                    theme="snow"
+                                                                    value={templateFormData[field.name] || ''}
+                                                                    onChange={val => setTemplateFormData(prev => ({ ...prev, [field.name]: val }))}
+                                                                    modules={quillModules}
+                                                                    placeholder={`Enter ${displayLabel}...`}
+                                                                    style={{ minHeight: '120px' }}
+                                                                />
+                                                            </div>
+                                                        ) : (
+                                                            <input 
+                                                                type={isReadonly ? 'text' : field.type || 'text'}
+                                                                className="form-input"
+                                                                placeholder={isReadonly ? 'Auto calculated...' : `Enter ${displayLabel}...`}
+                                                                value={templateFormData[field.name] || ''}
+                                                                onChange={e => setTemplateFormData(prev => ({ ...prev, [field.name]: e.target.value }))}
+                                                                readOnly={isReadonly}
+                                                                style={isReadonly ? { backgroundColor: 'var(--bg-subtle)' } : {}}
+                                                            />
+                                                        )}
+                                                    </div>
+                                                );
+                                            })}
+                                        </div>
+
+                                        {/* Image Attachments */}
+                                        <div style={{ marginTop: '1.5rem', paddingTop: '1rem', borderTop: '1px dashed var(--border-color)' }}>
+                                            <label className="form-label"><ImagePlus size={14} style={{ verticalAlign: 'middle', marginRight: '6px' }} />Foto Lampiran (opsional)</label>
+                                            <input
+                                                type="file"
+                                                className="form-input"
+                                                accept="image/png,image/jpeg,image/jpg"
+                                                multiple
+                                                onChange={e => setAttachmentFiles(Array.from(e.target.files))}
+                                            />
+                                            {attachmentFiles.length > 0 && (
+                                                <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginTop: '4px' }}>
+                                                    {attachmentFiles.length} file terpilih — akan ditambahkan sebagai halaman lampiran di akhir PDF.
+                                                </p>
+                                            )}
                                         </div>
                                     </div>
                                 )}

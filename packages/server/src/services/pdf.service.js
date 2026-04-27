@@ -10,15 +10,65 @@ const execFileAsync = util.promisify(execFile);
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const scriptPath = path.resolve(__dirname, '../../scripts/stamp_pdf.py');
+const findKeywordScript = path.resolve(__dirname, '../../scripts/find_keyword.py');
 
 export const PdfService = {
+    /**
+     * Executes the python script to search a PDF for a keyword and returns its exact coordinates.
+     */
+    async findKeywordPosition(inputPdfPath, keyword, positionHint = 'Above', offsetX = 0, offsetY = 0) {
+        try {
+            let inputAbs = inputPdfPath;
+            if (!path.isAbsolute(inputAbs)) {
+                inputAbs = path.resolve(process.cwd(), inputPdfPath);
+                if (!fs.existsSync(inputAbs) && process.env.DOCUMENT_STORAGE_PATH) {
+                    inputAbs = path.join(process.env.DOCUMENT_STORAGE_PATH, path.basename(inputPdfPath));
+                }
+            }
+
+            if (!fs.existsSync(inputAbs)) {
+                console.warn(`[PdfService] ERROR: Input PDF does not exist: ${inputAbs}`);
+                return null;
+            }
+
+            const args = [
+                findKeywordScript,
+                inputAbs,
+                keyword,
+                '--pos',
+                positionHint || 'Above',
+                '--offset_x',
+                String(offsetX || 0),
+                '--offset_y',
+                String(offsetY || 0)
+            ];
+
+            const { stdout } = await execFileAsync('python', args);
+            // Result is JSON printed by the script
+            const result = JSON.parse(stdout);
+            
+            if (result.found) {
+                return {
+                    page: result.page,
+                    x: result.x,
+                    y: result.y,
+                    width: result.width,
+                    height: result.height
+                };
+            }
+            return null;
+        } catch (err) {
+            console.error('[PdfService] error finding keyword position:', err);
+            return null;
+        }
+    },
     /**
      * Invokes the PyMuPDF python script to stamp a signature image onto the target PDF.
      * 
      * Paths from the database may be relative (e.g. "storage/signatures/file.png")
      * so we resolve them relative to the server package root (process.cwd()).
      */
-    async stampSignature(inputPdfPath, outputPdfPath, signatureImagePath, keyword, positionHint = 'Above', offsetX = 0, offsetY = 0, delegateName = '') {
+    async stampSignature(inputPdfPath, outputPdfPath, signatureImagePath, keyword, positionHint = 'Above', offsetX = 0, offsetY = 0, delegateName = '', absX = null, absY = null, absPage = null, absWidth = 140, absHeight = 60) {
         try {
             // Resolve absolute paths — DB stores relative paths like "storage/..."
             let inputAbs = inputPdfPath;
@@ -52,6 +102,7 @@ export const PdfService = {
             console.log(`[PdfService] === PDF Signature Stamping ===`);
             console.log(`[PdfService]   Keyword:     "${keyword}"`);
             console.log(`[PdfService]   Position:    ${positionHint}`);
+            console.log(`[PdfService]   Absolute:    ${absX !== null ? `Yes (X:${absX}, Y:${absY}, Page:${absPage})` : 'No (using keyword search)'}`);
             console.log(`[PdfService]   Input PDF:   ${inputAbs}`);
             console.log(`[PdfService]   Output PDF:  ${outputAbs}`);
             console.log(`[PdfService]   Signature:   ${sigAbs}`);
@@ -82,7 +133,7 @@ export const PdfService = {
                 inputAbs,
                 outputAbs,
                 sigAbs,
-                keyword,
+                keyword || 'IGNORE', // Ensure python gets a string even if we only care about absolute
                 '--pos',
                 positionHint || 'Above',
                 '--offset_x',
@@ -94,6 +145,14 @@ export const PdfService = {
             if (delegateName) {
                 args.push('--delegate_name');
                 args.push(delegateName);
+            }
+
+            if (absX !== null && absY !== null && absPage !== null) {
+                args.push('--abs_x', String(absX));
+                args.push('--abs_y', String(absY));
+                args.push('--abs_page', String(absPage));
+                args.push('--abs_width', String(absWidth));
+                args.push('--abs_height', String(absHeight));
             }
 
             const { stdout, stderr } = await execFileAsync('python', args);

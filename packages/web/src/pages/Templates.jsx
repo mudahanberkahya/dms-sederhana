@@ -1,6 +1,6 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { api } from '../lib/api';
-import { Plus, Trash2, X, FileText, CheckCircle, XCircle } from 'lucide-react';
+import { Plus, Trash2, X, FileText, CheckCircle, XCircle, Edit2 } from 'lucide-react';
 import './Admin.css';
 
 export default function Templates() {
@@ -8,12 +8,13 @@ export default function Templates() {
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState(null);
 
-    // Modal state
     const [showModal, setShowModal] = useState(false);
     const [name, setName] = useState('');
     const [file, setFile] = useState(null);
-    const [fieldsConfig, setFieldsConfig] = useState('[\n  {\n    "name": "to",\n    "label": "To",\n    "type": "text"\n  }\n]');
     const [isSaving, setIsSaving] = useState(false);
+    const [parsedFields, setParsedFields] = useState([]);
+    const [isExtracting, setIsExtracting] = useState(false);
+    const [editTemplateId, setEditTemplateId] = useState(null);
 
     const loadTemplates = async () => {
         try {
@@ -31,40 +32,128 @@ export default function Templates() {
         loadTemplates();
     }, []);
 
+    useEffect(() => {
+        if (!file || editTemplateId) {
+            if (!editTemplateId) setParsedFields([]);
+            return;
+        }
+
+        const extractFormFields = async () => {
+            setIsExtracting(true);
+            try {
+                const formData = new FormData();
+                formData.append('templateFile', file);
+                const res = await api.admin.templates.extractFields(formData);
+                if (res && res.fieldsConfig) {
+                    setParsedFields(res.fieldsConfig);
+                }
+            } catch (err) {
+                console.error("Failed to extract fields:", err);
+            } finally {
+                setIsExtracting(false);
+            }
+        };
+
+        extractFormFields();
+    }, [file]);
+
+    const handleCloseModal = () => {
+        setShowModal(false);
+        setEditTemplateId(null);
+        setName('');
+        setFile(null);
+        setParsedFields([]);
+        setError(null);
+    };
+
+    const openEditModal = (t) => {
+        setEditTemplateId(t.id);
+        setName(t.name);
+        setFile(null);
+        // Ensure sorted by existing order if present
+        let config = t.fieldsConfig || [];
+        if (config.length > 0 && config[0].order !== undefined) {
+            config = [...config].sort((a, b) => a.order - b.order);
+        }
+        setParsedFields(config);
+        setShowModal(true);
+    };
+
+    const handleFieldTypeChange = (index, newType) => {
+        const updated = [...parsedFields];
+        updated[index].type = newType;
+        setParsedFields(updated);
+    };
+
+    const handleFieldLabelChange = (index, newLabel) => {
+        const updated = [...parsedFields];
+        updated[index].label = newLabel;
+        setParsedFields(updated);
+    };
+
+    const handleFieldFormulaChange = (index, newFormula) => {
+        const updated = [...parsedFields];
+        updated[index].formula = newFormula;
+        setParsedFields(updated);
+    };
+
+    const handleMoveFieldUp = (index) => {
+        if (index === 0) return;
+        const updated = [...parsedFields];
+        const temp = updated[index];
+        updated[index] = updated[index - 1];
+        updated[index - 1] = temp;
+        setParsedFields(updated);
+    };
+
+    const handleMoveFieldDown = (index) => {
+        if (index === parsedFields.length - 1) return;
+        const updated = [...parsedFields];
+        const temp = updated[index];
+        updated[index] = updated[index + 1];
+        updated[index + 1] = temp;
+        setParsedFields(updated);
+    };
+
     const handleSubmit = async (e) => {
         e.preventDefault();
         setError(null);
 
         if (!name.trim()) return setError("Template Name is required.");
-        if (!file) return setError("Base PDF File is required.");
-        if (!fieldsConfig.trim()) return setError("Fields Configuration is required.");
+        if (!file && !editTemplateId) return setError("Base PDF File is required.");
 
         setIsSaving(true);
 
         try {
-            // Verify JSON format
-            let parsed = [];
-            try {
-                parsed = JSON.parse(fieldsConfig);
-            } catch (err) {
-                throw new Error("Fields Config is not a valid JSON array.");
-            }
-
-            if (!Array.isArray(parsed)) {
-                throw new Error("Fields Config must be a JSON array.");
-            }
-
             const formData = new FormData();
             formData.append('name', name);
-            formData.append('fieldsConfig', JSON.stringify(parsed));
             if (file) formData.append('templateFile', file);
+            
+            if (parsedFields.length > 0) {
+                // Ensure array order explicitly sets the 'order' integer
+                const orderedFields = parsedFields.map((f, i) => ({ ...f, order: i + 1 }));
+                formData.append('fieldsConfig', JSON.stringify(orderedFields));
+            }
 
-            await api.admin.templates.upload(formData);
+            if (editTemplateId) {
+                // Determine if we are updating fieldsConfig only, or also replacing the PDF
+                let payload;
+                if (file) {
+                    // Update with file -> formData
+                    await api.admin.templates.update(editTemplateId, formData);
+                } else {
+                    // Update without file -> JSON payload
+                    payload = { name };
+                    if (parsedFields.length > 0) {
+                        payload.fieldsConfig = parsedFields.map((f, i) => ({ ...f, order: i + 1 }));
+                    }
+                    await api.admin.templates.update(editTemplateId, payload);
+                }
+            } else {
+                await api.admin.templates.upload(formData);
+            }
 
-            setShowModal(false);
-            setName('');
-            setFile(null);
-            setFieldsConfig('[\n  {\n    "name": "to",\n    "label": "To",\n    "type": "text"\n  }\n]');
+            handleCloseModal();
             loadTemplates();
         } catch (err) {
             setError(err.response?.data?.error || err.message);
@@ -104,7 +193,7 @@ export default function Templates() {
                 </button>
             </div>
 
-            {error && <div className="alert alert-error" style={{ marginBottom: '1rem' }}>{error}</div>}
+            {error && !showModal && <div className="alert alert-error" style={{ marginBottom: '1rem' }}>{error}</div>}
 
             <div className="card">
                 {isLoading ? (
@@ -146,7 +235,10 @@ export default function Templates() {
                                                     {t.isActive ? 'Active' : 'Inactive'}
                                                 </span>
                                             </td>
-                                            <td className="text-right">
+                                            <td className="text-right" style={{ whiteSpace: 'nowrap' }}>
+                                                <button className="btn-icon text-primary" onClick={() => openEditModal(t)} title="Edit Config & Urutan" style={{ marginRight: '0.5rem' }}>
+                                                    <Edit2 size={16} />
+                                                </button>
                                                 <button className="btn-icon text-danger" onClick={() => handleDelete(t.id)} title="Delete">
                                                     <Trash2 size={16} />
                                                 </button>
@@ -160,13 +252,13 @@ export default function Templates() {
                 )}
             </div>
 
-            {/* CREATE MODAL */}
+            {/* CREATE MODAL — Wide for PDF visual mapper */}
             {showModal && (
-                <div className="modal-overlay" style={{ alignItems: 'flex-start', paddingTop: '5vh' }}>
-                    <div className="modal-content" style={{ maxWidth: '500px', maxHeight: '90vh', overflowY: 'auto' }}>
+                <div className="modal-overlay" style={{ alignItems: 'flex-start', paddingTop: '3vh' }}>
+                    <div className="modal-content" style={{ maxWidth: '900px', maxHeight: '92vh', overflowY: 'auto' }}>
                         <div className="modal-header">
-                            <h2 className="modal-title">Add Template</h2>
-                            <button className="btn-icon" onClick={() => setShowModal(false)} disabled={isSaving}>
+                            <h2 className="modal-title">{editTemplateId ? 'Edit Template' : 'Add Template'}</h2>
+                            <button className="btn-icon" onClick={handleCloseModal} disabled={isSaving}>
                                 <X size={20} />
                             </button>
                         </div>
@@ -178,13 +270,13 @@ export default function Templates() {
                                     <input
                                         type="text"
                                         className="form-input"
-                                        placeholder="e.g. Internal Memo Template"
+                                        placeholder="e.g. Purchase Order"
                                         value={name}
                                         onChange={e => setName(e.target.value)}
                                     />
                                 </div>
                                 <div className="form-group">
-                                    <label className="form-label">Base PDF File *</label>
+                                    <label className="form-label">Base PDF File {editTemplateId ? '(Opsional)' : '*'}</label>
                                     <input
                                         type="file"
                                         className="form-input"
@@ -192,25 +284,86 @@ export default function Templates() {
                                         onChange={e => setFile(e.target.files[0])}
                                     />
                                     <p className="text-xs text-muted" style={{ marginTop: '0.25rem' }}>
-                                        Must be a PDF file structured as a Form with designated interactive text fields.
+                                        {editTemplateId 
+                                            ? "Kosongkan jika hanya ingin mengubah Label/Urutan form saja. Upload file baru jika form dasarnya berubah." 
+                                            : "DMS secara otomatis akan membaca Text Field (AcroForms) yang ada di dalam PDF tersebut menggunakan nama field-nya."}
                                     </p>
                                 </div>
-                                <div className="form-group">
-                                    <label className="form-label">Fields Configuration (JSON Array) *</label>
-                                    <textarea
-                                        className="form-input"
-                                        rows={6}
-                                        style={{ fontFamily: 'monospace', fontSize: '0.85rem' }}
-                                        value={fieldsConfig}
-                                        onChange={e => setFieldsConfig(e.target.value)}
-                                    />
-                                    <p className="text-xs text-muted" style={{ marginTop: '0.25rem' }}>
-                                        Defines what the user inputs. Example: <code>[{"{"}"name":"subject","label":"Subject","type":"text"{"}"}]</code>
-                                    </p>
-                                </div>
+
+                                {/* Extracted Fields Configurator */}
+                                {isExtracting && (
+                                    <div className="alert alert-info" style={{ marginTop: '1rem' }}>
+                                        Mengekstrak AcroForm fields dari PDF...
+                                    </div>
+                                )}
+                                
+                                {!isExtracting && parsedFields.length > 0 && (
+                                    <div className="form-group mt-4">
+                                        <label className="form-label">Konfigurasi Kolom Ekstraksi (AcroForms)</label>
+                                        <p className="text-xs text-muted mb-2">
+                                            Berikut adalah komponen field yang otomatis terbaca dari file PDF Anda. Anda bisa mengatur <b>urutan form</b> (↑/↓), mengubah **Tipe Input**, dan memasukkan **Rumus (Formula)** jika tipenya Read-only (contoh rumus: <code>field_harga * field_qty</code>).
+                                        </p>
+                                        <div className="table-responsive">
+                                            <table className="admin-table">
+                                                <thead>
+                                                    <tr>
+                                                        <th>Urutan</th>
+                                                        <th>Field ID (Dari PDF)</th>
+                                                        <th>Label (Penamaan UI)</th>
+                                                        <th>Tipe Input & Formula</th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody>
+                                                    {parsedFields.map((field, idx) => (
+                                                        <tr key={idx}>
+                                                            <td style={{ whiteSpace: 'nowrap' }}>
+                                                                <button type="button" className="btn-icon" onClick={() => handleMoveFieldUp(idx)} disabled={idx === 0} style={{ padding: '0.1rem', marginRight: '0.2rem' }}>↑</button>
+                                                                <button type="button" className="btn-icon" onClick={() => handleMoveFieldDown(idx)} disabled={idx === parsedFields.length - 1} style={{ padding: '0.1rem' }}>↓</button>
+                                                            </td>
+                                                            <td><code className="text-xs">{field.name}</code></td>
+                                                            <td>
+                                                                <input 
+                                                                    type="text" 
+                                                                    className="form-input" 
+                                                                    style={{ padding: '0.25rem 0.5rem', fontSize: '0.875rem' }}
+                                                                    value={field.label}
+                                                                    onChange={e => handleFieldLabelChange(idx, e.target.value)}
+                                                                />
+                                                            </td>
+                                                            <td>
+                                                                <select 
+                                                                    className="form-select mb-1" 
+                                                                    style={{ padding: '0.25rem 0.5rem', fontSize: '0.875rem', width: '100%' }}
+                                                                    value={field.type}
+                                                                    onChange={e => handleFieldTypeChange(idx, e.target.value)}
+                                                                >
+                                                                    <option value="text">Text (Pendek)</option>
+                                                                    <option value="textarea">Text Area (Panjang)</option>
+                                                                    <option value="number">Number (Angka/Harga)</option>
+                                                                    <option value="date">Date (Tanggal)</option>
+                                                                    <option value="readonly">Read-only (Hanya Baca / Rumus)</option>
+                                                                </select>
+                                                                {field.type === 'readonly' && (
+                                                                    <input 
+                                                                        type="text" 
+                                                                        className="form-input mt-1" 
+                                                                        style={{ padding: '0.25rem 0.5rem', fontSize: '0.875rem', background: '#f8fafc', width: '100%' }}
+                                                                        placeholder="Formula misal: qty * price"
+                                                                        value={field.formula || ''}
+                                                                        onChange={e => handleFieldFormulaChange(idx, e.target.value)}
+                                                                    />
+                                                                )}
+                                                            </td>
+                                                        </tr>
+                                                    ))}
+                                                </tbody>
+                                            </table>
+                                        </div>
+                                    </div>
+                                )}
                             </div>
                             <div className="modal-footer">
-                                <button type="button" className="btn btn-secondary" onClick={() => setShowModal(false)} disabled={isSaving}>
+                                <button type="button" className="btn btn-secondary" onClick={handleCloseModal} disabled={isSaving}>
                                     Cancel
                                 </button>
                                 <button type="submit" className="btn btn-primary" disabled={isSaving}>

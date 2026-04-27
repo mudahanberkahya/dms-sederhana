@@ -10,7 +10,8 @@ import multer from 'multer';
 import crypto from 'crypto';
 import path from 'path';
 import fs from 'fs';
-import { PDFDocument } from 'pdf-lib';
+import { PDFDocument, StandardFonts, rgb } from 'pdf-lib';
+import { domYToPdfY } from '../services/coordinateUtils.js';
 
 const router = express.Router();
 
@@ -201,12 +202,202 @@ router.post('/', requireAuth, upload.single('documentFile'), async (req, res) =>
     }
 });
 
-// POST /api/documents/generate (Generate document from template)
-router.post('/generate', requireAuth, async (req, res) => {
-    try {
-        // Assume req.body contains JSON payload since multer is not used here for files
-        const { templateId, formData, documentTitle, title, category, branch, department, notes, subCategory } = req.body;
+// =====================================================================
+// HTML Rich Text → pdf-lib Text Runs Parser
+// Parses HTML from ReactQuill and returns styled text segments.
+// =====================================================================
+function parseHtmlToRuns(html) {
+    if (!html || typeof html !== 'string') return [{ text: String(html || ''), bold: false, italic: false, underline: false }];
+    
+    // Check if content has any HTML tags at all
+    if (!/<[^>]+>/.test(html)) {
+        return [{ text: html, bold: false, italic: false, underline: false }];
+    }
+
+    const runs = [];
+    // Replace common HTML entities
+    let cleaned = html.replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&nbsp;/g, ' ').replace(/&quot;/g, '"');
+    // Replace <br>, <br/>, </p><p> with newline markers
+    cleaned = cleaned.replace(/<br\s*\/?>/gi, '\n');
+    cleaned = cleaned.replace(/<\/p>\s*<p[^>]*>/gi, '\n');
+    // Remove opening <p> and closing </p> at boundaries
+    cleaned = cleaned.replace(/^<p[^>]*>/i, '').replace(/<\/p>$/i, '');
+    // Handle lists: <li> becomes "• " with newline
+    cleaned = cleaned.replace(/<li[^>]*>/gi, '\n• ').replace(/<\/li>/gi, '');
+    cleaned = cleaned.replace(/<\/?(?:ul|ol)[^>]*>/gi, '');
+
+    // Now parse inline tags: <strong>, <b>, <em>, <i>, <u>, <span>
+    // Use a simple state-machine approach
+    let pos = 0;
+    let bold = false, italic = false, underline = false;
+    const tagRegex = /<(\/?)(\w+)([^>]*)>/g;
+    let match;
+    
+    while ((match = tagRegex.exec(cleaned)) !== null) {
+        // Text before the tag
+        if (match.index > pos) {
+            const text = cleaned.substring(pos, match.index);
+            if (text) runs.push({ text, bold, italic, underline });
+        }
         
+        const isClosing = match[1] === '/';
+        const tagName = match[2].toLowerCase();
+        
+        if (tagName === 'strong' || tagName === 'b') bold = !isClosing;
+        else if (tagName === 'em' || tagName === 'i') italic = !isClosing;
+        else if (tagName === 'u') underline = !isClosing;
+        // span with style could carry more, but we'll keep it simple
+        
+        pos = match.index + match[0].length;
+    }
+    
+    // Remaining text after last tag
+    if (pos < cleaned.length) {
+        const text = cleaned.substring(pos);
+        if (text) runs.push({ text, bold, italic, underline });
+    }
+    
+    if (runs.length === 0) {
+        // Fallback: strip all tags and return as plain text
+        const stripped = cleaned.replace(/<[^>]*>/g, '');
+        runs.push({ text: stripped, bold: false, italic: false, underline: false });
+    }
+    
+    return runs;
+}
+
+// =====================================================================
+// Rich Text Field Drawer with Multi-Page Overflow
+// Draws styled text runs onto PDF pages, auto-creating new pages
+// when text exceeds available space.
+// =====================================================================
+function drawRichTextField(pdfDoc, fonts, startPageIndex, startX, startY, maxWidth, runs, fontSize, bottomMargin) {
+    const lineHeight = fontSize * 1.4;
+    // startY is the TOP edge of the box. Baseline starts one fontSize lower.
+    let cursorY = startY - fontSize;
+    let currentPageIndex = startPageIndex;
+    let page = pdfDoc.getPage(currentPageIndex);
+    const { width: pageWidth, height: pageHeight } = page.getSize();
+    const bm = bottomMargin || 40;
+
+    function getFont(run) {
+        if (run.bold && run.italic) return fonts.boldItalic;
+        if (run.bold) return fonts.bold;
+        if (run.italic) return fonts.italic;
+        return fonts.regular;
+    }
+
+    function ensureSpace() {
+        if (cursorY < bm) {
+            // Add a new blank page with same dimensions
+            page = pdfDoc.addPage([pageWidth, pageHeight]);
+            currentPageIndex = pdfDoc.getPageCount() - 1;
+            cursorY = pageHeight - 50; // top margin on new page
+        }
+    }
+
+    // Flatten runs into words with their styling for wrapping
+    const allWords = [];
+    for (const run of runs) {
+        const parts = run.text.split(/(\n)/); // split by newlines, keeping them
+        for (const part of parts) {
+            if (part === '\n') {
+                allWords.push({ text: '\n', font: getFont(run), bold: run.bold, italic: run.italic, underline: run.underline });
+            } else {
+                const words = part.split(/( +)/); // split by spaces, keeping them
+                for (const w of words) {
+                    if (w.length > 0) {
+                        allWords.push({ text: w, font: getFont(run), bold: run.bold, italic: run.italic, underline: run.underline });
+                    }
+                }
+            }
+        }
+    }
+
+    // Now lay out words with wrapping
+    let lineWords = [];
+    let lineWidth = 0;
+
+    function flushLine() {
+        if (lineWords.length === 0) return;
+        ensureSpace();
+        let drawX = startX;
+        for (const word of lineWords) {
+            const w = word.font.widthOfTextAtSize(word.text, fontSize);
+            page.drawText(word.text, {
+                x: drawX,
+                y: cursorY,
+                size: fontSize,
+                font: word.font,
+                color: rgb(0, 0, 0),
+            });
+            // Draw underline if needed
+            if (word.underline) {
+                page.drawLine({
+                    start: { x: drawX, y: cursorY - 1 },
+                    end: { x: drawX + w, y: cursorY - 1 },
+                    thickness: 0.5,
+                    color: rgb(0, 0, 0),
+                });
+            }
+            drawX += w;
+        }
+        cursorY -= lineHeight;
+        lineWords = [];
+        lineWidth = 0;
+    }
+
+    for (const word of allWords) {
+        if (word.text === '\n') {
+            flushLine();
+            continue;
+        }
+        const wordWidth = word.font.widthOfTextAtSize(word.text, fontSize);
+        if (lineWidth + wordWidth > maxWidth && lineWords.length > 0) {
+            flushLine();
+            ensureSpace();
+        }
+        lineWords.push(word);
+        lineWidth += wordWidth;
+    }
+    flushLine(); // flush remaining
+
+    return { lastPageIndex: currentPageIndex, lastY: cursorY };
+}
+
+// =====================================================================
+// Multer config for /generate endpoint (image attachments)
+// =====================================================================
+const generateUpload = multer({
+    storage: multer.memoryStorage(), // keep in memory for embedding into PDF
+    limits: { fileSize: 10 * 1024 * 1024 }, // 10MB per file
+    fileFilter: (req, file, cb) => {
+        if (file.mimetype.startsWith('image/')) cb(null, true);
+        else cb(new Error('Only image files are allowed as attachments'), false);
+    }
+});
+
+// POST /api/documents/generate (Generate document from template)
+router.post('/generate', requireAuth, generateUpload.array('attachments', 10), async (req, res) => {
+    try {
+        // Body fields come as strings from FormData — parse them
+        const templateId = req.body.templateId;
+        const documentTitle = req.body.documentTitle || '';
+        const category = req.body.category;
+        const branch = req.body.branch;
+        const department = req.body.department || null;
+        const notes = req.body.notes || null;
+        const subCategory = req.body.subCategory || null;
+        
+        let formData = {};
+        try {
+            if (req.body.formData) {
+                formData = typeof req.body.formData === 'string' ? JSON.parse(req.body.formData) : req.body.formData;
+            }
+        } catch (e) {
+            console.warn("[DocGen] Failed to parse formData:", e.message);
+        }
+
         let dynamicDepartments = [];
         try {
             if (req.body.dynamicDepartments) {
@@ -240,55 +431,116 @@ router.post('/generate', requireAuth, async (req, res) => {
 
         const combinedTitle = `${template.name} - ${documentTitle || 'Untitled'}`;
 
-        // Load PDF and Form
+        // ===== LOAD PDF & EMBED FONTS =====
         const pdfBytes = fs.readFileSync(template.filePath);
         const pdfDoc = await PDFDocument.load(pdfBytes);
+        
+        // Embed all 4 Helvetica variants for rich text support
+        const fonts = {
+            regular: await pdfDoc.embedFont(StandardFonts.Helvetica),
+            bold: await pdfDoc.embedFont(StandardFonts.HelveticaBold),
+            italic: await pdfDoc.embedFont(StandardFonts.HelveticaOblique),
+            boldItalic: await pdfDoc.embedFont(StandardFonts.HelveticaBoldOblique),
+        };
+        const fontSize = 11;
+        const bottomMargin = 40;
+        
+        // ===== FILL ACROFORM FIELDS NATIVELY =====
+        // Since Visual Mapping coordinates were failing for complex PDF CropBox/Matrices, 
+        // we shifted back to native AcroForm mapping (e.g. via Nitro/Adobe).
         const form = pdfDoc.getForm();
         
-        // Fill data
         if (formData && typeof formData === 'object') {
             for (const [key, value] of Object.entries(formData)) {
+                if (!value && value !== 0) continue;
+                
                 try {
+                    // Ignore predefined prefix check, just match the exact name
                     const field = form.getTextField(key);
                     if (field) {
-                        field.setText(value || '');
+                        field.setText(String(value));
                     }
-                } catch(e) {
-                    console.warn(`Could not set field ${key}:`, e.message);
+                } catch (e) {
+                    console.warn(`[DocGen] Could not find/fill AcroForm field: ${key}`);
+                }
+            }
+        }
+        
+        // Flatten the form to burn the text permanently into the PDF layer
+        form.flatten();
+
+        // ===== IMAGE ATTACHMENTS — Embed as grid pages =====
+        const attachments = req.files || [];
+        if (attachments.length > 0) {
+            console.log(`[DocGen] Embedding ${attachments.length} image attachment(s)...`);
+            
+            const firstPage = pdfDoc.getPage(0);
+            const { width: pgW, height: pgH } = firstPage.getSize();
+            const margin = 40;
+            const colGap = 20;
+            const rowGap = 20;
+            const cols = 2;
+            const imgWidth = (pgW - margin * 2 - colGap * (cols - 1)) / cols;
+            const maxImgHeight = 250;
+            
+            let attachPage = pdfDoc.addPage([pgW, pgH]);
+            // Draw "Lampiran" header
+            attachPage.drawText('Lampiran', {
+                x: margin, y: pgH - margin - 20,
+                size: 16, font: fonts.bold, color: rgb(0, 0, 0),
+            });
+            
+            let curX = margin;
+            let curY = pgH - margin - 50;
+            let colIdx = 0;
+
+            for (const att of attachments) {
+                try {
+                    let embeddedImg;
+                    if (att.mimetype === 'image/png') {
+                        embeddedImg = await pdfDoc.embedPng(att.buffer);
+                    } else {
+                        embeddedImg = await pdfDoc.embedJpg(att.buffer);
+                    }
+
+                    // Scale image to fit within cell
+                    const aspect = embeddedImg.width / embeddedImg.height;
+                    let drawW = imgWidth;
+                    let drawH = drawW / aspect;
+                    if (drawH > maxImgHeight) {
+                        drawH = maxImgHeight;
+                        drawW = drawH * aspect;
+                    }
+
+                    // Check if we need a new page
+                    if (curY - drawH < margin) {
+                        attachPage = pdfDoc.addPage([pgW, pgH]);
+                        curX = margin;
+                        curY = pgH - margin - 20;
+                        colIdx = 0;
+                    }
+
+                    attachPage.drawImage(embeddedImg, {
+                        x: curX, y: curY - drawH,
+                        width: drawW, height: drawH,
+                    });
+
+                    colIdx++;
+                    if (colIdx >= cols) {
+                        colIdx = 0;
+                        curX = margin;
+                        curY -= (drawH + rowGap);
+                    } else {
+                        curX += imgWidth + colGap;
+                    }
+                } catch (imgErr) {
+                    console.warn(`[DocGen] Failed to embed attachment ${att.originalname}:`, imgErr.message);
                 }
             }
         }
 
-        let flatPdfBytes;
-        try {
-            form.flatten();
-            flatPdfBytes = await pdfDoc.save();
-        } catch (flattenErr) {
-            console.warn("Form flatenning failed, falling back to read-only reloading:", flattenErr.message);
-            // Reload PDF from scratch because the previous pdfDoc is now corrupted by the failed flatten()
-            const fallbackDoc = await PDFDocument.load(pdfBytes);
-            const fallbackForm = fallbackDoc.getForm();
-            
-            // Re-fill the fields safely
-            if (formData && typeof formData === 'object') {
-                for (const [key, value] of Object.entries(formData)) {
-                    try {
-                        const field = fallbackForm.getTextField(key);
-                        if (field) field.setText(value || '');
-                    } catch(e) {}
-                }
-            }
-
-            // Apply read-only instead of flattening
-            try {
-                const fields = fallbackForm.getFields();
-                fields.forEach(f => f.enableReadOnly());
-            } catch (e) {
-                console.warn("Failed to apply read-only fallback:", e.message);
-            }
-            
-            flatPdfBytes = await fallbackDoc.save();
-        }
+        // ===== SAVE GENERATED PDF =====
+        const flatPdfBytes = await pdfDoc.save();
 
         const pendingPath = path.join(process.env.DOCUMENT_STORAGE_PATH || './storage/documents', 'pending');
         if (!fs.existsSync(pendingPath)) {
@@ -301,7 +553,9 @@ router.post('/generate', requireAuth, async (req, res) => {
         const generatedPath = path.join(pendingPath, filename);
 
         fs.writeFileSync(generatedPath, flatPdfBytes);
+        console.log(`[DocGen] ✅ Generated PDF saved: ${generatedPath} (${flatPdfBytes.length} bytes)`);
 
+        // ===== CREATE DOCUMENT RECORD (file_path → generated file, NOT template) =====
         const data = {
             title: combinedTitle,
             category,
@@ -309,7 +563,7 @@ router.post('/generate', requireAuth, async (req, res) => {
             branch,
             department: department || null,
             notes: notes || null,
-            filePath: generatedPath,
+            filePath: generatedPath,   // ← CRITICAL: points to GENERATED file, not template
             originalName: filename,
             uploadedBy: req.user.id,
             dynamicDepartments

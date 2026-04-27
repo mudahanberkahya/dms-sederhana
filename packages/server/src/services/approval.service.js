@@ -1,9 +1,12 @@
 import { eq, and, or, isNull, arrayContains, inArray, sql, gte, lte } from 'drizzle-orm';
 import path from 'path';
+import fs from 'fs';
 import { db } from '../db/index.js';
 import { approval, document, user, userProfile, signature, keywordMapping } from '../db/schema.js';
 import { PdfService } from './pdf.service.js';
 import { LogService } from './log.service.js';
+import { PDFDocument } from 'pdf-lib';
+import { domYToPdfY } from './coordinateUtils.js';
 
 export const ApprovalService = {
 
@@ -174,7 +177,7 @@ export const ApprovalService = {
     /**
      * Process an approval action (Approve/Reject)
      */
-    async processApproval(approvalId, userId, action, comment) {
+    async processApproval(approvalId, userId, action, comment, signatureConfig = null) {
         try {
             return await db.transaction(async (tx) => {
                 // 1. Get current approval step
@@ -225,8 +228,6 @@ export const ApprovalService = {
                 const [doc] = await tx.select().from(document).where(eq(document.id, docId)).limit(1);
                 if (!doc) throw new Error("Document not found");
 
-                const fs = await import('fs');
-
                 if (action === 'reject') {
                     // Move file to rejected folder
                     const storageRoot = process.env.DOCUMENT_STORAGE_PATH || path.resolve(process.cwd(), './storage/documents');
@@ -255,7 +256,7 @@ export const ApprovalService = {
                         .set({ 
                             status: 'REJECTED', 
                             updatedAt: new Date(),
-                            filePath: doc.signedFilePath ? doc.filePath : newFilePath, // keep original filePath as is if signed exists, else update
+                            filePath: doc.signedFilePath ? doc.filePath : newFilePath,
                             signedFilePath: doc.signedFilePath ? newFilePath : null
                         })
                         .where(eq(document.id, docId));
@@ -264,7 +265,103 @@ export const ApprovalService = {
                     // Try to generate a stamp
                     let stampedFilePath = null;
                     const [sig] = await tx.select().from(signature).where(eq(signature.userId, userId)).limit(1);
-                    if (sig) {
+
+                    // =====================================================
+                    // VISUAL SIGNATURE STAMPING (pdf-lib) — New Enterprise Flow
+                    // =====================================================
+                    if (signatureConfig && sig) {
+                        console.log(`[Approval] Visual signature stamping — coordinates: page=${signatureConfig.page}, x=${signatureConfig.x}, y=${signatureConfig.y}`);
+                        
+                        const inputPath = doc.signedFilePath || doc.filePath;
+                        let absoluteInputPath = inputPath;
+                        if (!path.isAbsolute(absoluteInputPath)) {
+                            absoluteInputPath = path.resolve(process.cwd(), inputPath);
+                            if (!fs.existsSync(absoluteInputPath) && process.env.DOCUMENT_STORAGE_PATH) {
+                                absoluteInputPath = path.join(process.env.DOCUMENT_STORAGE_PATH, path.basename(inputPath));
+                            }
+                        }
+
+                        if (!fs.existsSync(absoluteInputPath)) {
+                            throw new Error(`Input PDF not found for visual stamping: ${absoluteInputPath}`);
+                        }
+
+                        // Load the PDF
+                        const pdfBytes = fs.readFileSync(absoluteInputPath);
+                        const pdfDoc = await PDFDocument.load(pdfBytes);
+
+                        // Load signature image
+                        let sigAbsPath = sig.imagePath;
+                        if (!path.isAbsolute(sigAbsPath)) {
+                            sigAbsPath = path.resolve(process.cwd(), sigAbsPath);
+                            if (!fs.existsSync(sigAbsPath) && process.env.SIGNATURE_STORAGE_PATH) {
+                                sigAbsPath = path.join(process.env.SIGNATURE_STORAGE_PATH, path.basename(sig.imagePath));
+                            }
+                        }
+
+                        let sigImage;
+                        if (fs.existsSync(sigAbsPath)) {
+                            const sigBytes = fs.readFileSync(sigAbsPath);
+                            const ext = path.extname(sigAbsPath).toLowerCase();
+                            if (ext === '.png') {
+                                sigImage = await pdfDoc.embedPng(sigBytes);
+                            } else {
+                                sigImage = await pdfDoc.embedJpg(sigBytes);
+                            }
+                        }
+
+                        if (sigImage) {
+                            const pageIndex = (signatureConfig.page || 1) - 1;
+                            if (pageIndex >= 0 && pageIndex < pdfDoc.getPageCount()) {
+                                const page = pdfDoc.getPage(pageIndex);
+                                const { height: pageHeight } = page.getSize();
+
+                                // Convert DOM-style Y to pdf-lib Y
+                                const pdfY = domYToPdfY(
+                                    signatureConfig.y,
+                                    signatureConfig.height,
+                                    pageHeight
+                                );
+
+                                page.drawImage(sigImage, {
+                                    x: signatureConfig.x,
+                                    y: pdfY,
+                                    width: signatureConfig.width,
+                                    height: signatureConfig.height,
+                                });
+                            } else {
+                                console.warn(`[Approval] signatureConfig page ${signatureConfig.page} out of range (PDF has ${pdfDoc.getPageCount()} pages)`);
+                            }
+                        } else {
+                            console.warn(`[Approval] Signature image not found at ${sigAbsPath}, skipping visual stamp`);
+                        }
+
+                        // Save stamped PDF
+                        const stampedBytes = await pdfDoc.save();
+                        const storageDir = path.dirname(absoluteInputPath);
+                        const cleanDisplayId = doc.displayId.replace(/[^a-zA-Z0-9-]/g, '_');
+                        let originalName = cleanDisplayId;
+                        const baseMatch = path.basename(doc.filePath).match(/^(.*?)_/);
+                        if (baseMatch) originalName = baseMatch[1];
+                        
+                        const outputPath = path.join(storageDir, `${originalName}_${cleanDisplayId}_step${currentStep.stepOrder}_signed.pdf`);
+                        fs.writeFileSync(outputPath, stampedBytes);
+                        stampedFilePath = outputPath;
+                        console.log(`[Approval] ✅ Visual stamp saved: ${outputPath}`);
+
+                        // Clean up previous signed file
+                        if (doc.signedFilePath && doc.signedFilePath !== doc.filePath) {
+                            try {
+                                const oldAbs = path.isAbsolute(doc.signedFilePath) ? doc.signedFilePath : path.resolve(process.cwd(), doc.signedFilePath);
+                                if (fs.existsSync(oldAbs)) fs.unlinkSync(oldAbs);
+                            } catch (e) {
+                                console.warn("[Approval] Failed to cleanup old signed file:", e.message);
+                            }
+                        }
+
+                    // =====================================================
+                    // KEYWORD-BASED STAMPING (Python/PyMuPDF) — Legacy Fallback
+                    // =====================================================
+                    } else if (sig) {
                         // REFINED: Strictly filter keyword mapping by category, role, branch AND sub_category
                         let kwResults = [];
                         
@@ -337,6 +434,13 @@ export const ApprovalService = {
 
                             console.log(`[Approval] Executing PDF stamp: "${trimmedKeyword}" (Category: ${doc.category}, Role: ${currentStep.roleRequired}) -> ${outputPath}`);
                             
+                            // If user explicitly dragged the signature box in the frontend, pass those absolute coordinates
+                            const absX = signatureConfig?.x ?? null;
+                            const absY = signatureConfig?.y ?? null;
+                            const absPage = signatureConfig?.page ?? null;
+                            const absW = signatureConfig?.width ?? 140;
+                            const absH = signatureConfig?.height ?? 60;
+
                             await PdfService.stampSignature(
                                 inputPath,
                                 outputPath,
@@ -345,7 +449,12 @@ export const ApprovalService = {
                                 kw.positionHint,
                                 kw.offset_x,
                                 kw.offset_y,
-                                delegateNameToStamp
+                                delegateNameToStamp,
+                                absX,
+                                absY,
+                                absPage,
+                                absW,
+                                absH
                             );
                             stampedFilePath = outputPath;
 

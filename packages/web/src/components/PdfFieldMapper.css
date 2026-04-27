@@ -1,0 +1,211 @@
+/* ===================================
+   PDF Field Mapper — Visual Template Builder
+   =================================== */
+
+.pdf-mapper-container {
+    position: relative;
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+}
+
+/* Toolbar */
+.pdf-mapper-toolbar {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.625rem 0.875rem;
+    background: var(--bg-subtle, #f8f9fa);
+    border: 1px solid var(--border-color, #e2e8f0);
+    border-radius: 10px;
+}
+
+.pdf-mapper-toolbar .field-count {
+    margin-left: auto;
+    font-size: 0.8rem;
+    color: var(--text-muted, #94a3b8);
+    font-weight: 500;
+}
+
+/* PDF Viewer Wrapper */
+.pdf-mapper-viewer {
+    position: relative;
+    border: 2px dashed var(--border-color, #e2e8f0);
+    border-radius: 10px;
+    overflow: hidden;
+    background: #f1f5f9;
+    min-height: 400px;
+}
+
+.pdf-mapper-viewer.has-pdf {
+    border-style: solid;
+    border-color: var(--accent-teal, #14b8a6);
+}
+
+.pdf-mapper-canvas-wrapper {
+    position: relative;
+    display: inline-block;
+    width: 100%;
+}
+
+.pdf-mapper-canvas-wrapper .react-pdf__Page {
+    display: block;
+}
+
+.pdf-mapper-canvas-wrapper .react-pdf__Page canvas {
+    width: 100% !important;
+    height: auto !important;
+}
+
+/* Loading state */
+.pdf-mapper-loading {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 0.75rem;
+    padding: 3rem;
+    color: var(--text-muted, #94a3b8);
+    font-size: 0.9rem;
+}
+
+/* Field Overlay Box */
+.pdf-field-box {
+    border: 2px solid rgba(20, 184, 166, 0.85);
+    background: rgba(20, 184, 166, 0.08);
+    border-radius: 4px;
+    cursor: move;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: border-color 0.15s ease, background 0.15s ease, box-shadow 0.15s ease;
+    z-index: 10;
+}
+
+.pdf-field-box:hover {
+    background: rgba(20, 184, 166, 0.15);
+    box-shadow: 0 0 0 2px rgba(20, 184, 166, 0.2);
+}
+
+.pdf-field-box.selected {
+    border-color: #0ea5e9;
+    background: rgba(14, 165, 233, 0.12);
+    box-shadow: 0 0 0 3px rgba(14, 165, 233, 0.25);
+}
+
+.pdf-field-box .field-label {
+    font-size: 0.7rem;
+    font-weight: 600;
+    color: rgba(20, 184, 166, 0.9);
+    pointer-events: none;
+    user-select: none;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    padding: 0 4px;
+    max-width: 100%;
+}
+
+.pdf-field-box.selected .field-label {
+    color: #0ea5e9;
+}
+
+.pdf-field-box .field-delete-btn {
+    position: absolute;
+    top: -8px;
+    right: -8px;
+    width: 18px;
+    height: 18px;
+    background: #ef4444;
+    color: white;
+    border: none;
+    border-radius: 50%;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    font-size: 10px;
+    line-height: 1;
+    padding: 0;
+    z-index: 20;
+}
+
+.pdf-field-box:hover .field-delete-btn,
+.pdf-field-box.selected .field-delete-btn {
+    display: flex;
+}
+
+/* Field Editor Dialog (inline, below toolbar) */
+.pdf-field-editor {
+    padding: 0.875rem;
+    background: var(--bg-card, #ffffff);
+    border: 1px solid var(--border-color, #e2e8f0);
+    border-radius: 10px;
+    display: flex;
+    align-items: flex-end;
+    gap: 0.75rem;
+    flex-wrap: wrap;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+}
+
+.pdf-field-editor .form-group {
+    margin-bottom: 0;
+    flex: 1;
+    min-width: 140px;
+}
+
+.pdf-field-editor .form-label {
+    font-size: 0.75rem;
+    margin-bottom: 0.25rem;
+}
+
+.pdf-field-editor .form-input,
+.pdf-field-editor .form-select {
+    font-size: 0.85rem;
+    padding: 0.4rem 0.6rem;
+}
+
+.pdf-field-editor .editor-actions {
+    display: flex;
+    gap: 0.5rem;
+    align-items: flex-end;
+    padding-bottom: 2px;
+}
+
+/* Empty state */
+.pdf-mapper-empty {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    padding: 3rem 1.5rem;
+    color: var(--text-muted, #94a3b8);
+    text-align: center;
+}
+
+.pdf-mapper-empty p {
+    font-size: 0.9rem;
+    margin: 0;
+}
+
+.pdf-mapper-empty span {
+    font-size: 0.8rem;
+    opacity: 0.7;
+}
+
+/* Pagination controls */
+.pdf-mapper-pagination {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.75rem;
+    padding: 0.5rem;
+    font-size: 0.85rem;
+    color: var(--text-secondary, #64748b);
+}
+
+.pdf-mapper-pagination button {
+    padding: 0.25rem 0.5rem;
+}

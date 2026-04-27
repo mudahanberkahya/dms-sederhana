@@ -24,6 +24,7 @@ export const auth = betterAuth({
         "http://localhost:3001",
         "http://localhost:5174",
         "http://127.0.0.1:3001",
+        "http://192.168.0.100:5174",
         process.env.BETTER_AUTH_URL || "http://192.168.0.100:3001",
         // TestSprite automated testing tunnel origins
         "http://*.testsprite.com",

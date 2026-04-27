@@ -50,6 +50,23 @@ async function fetchBlob(endpoint, options = {}) {
     return await response.blob();
 }
 
+// Fetch helper for FormData (multipart) — no Content-Type header so browser sets boundary
+async function fetchFormData(endpoint, formData) {
+    const url = `${API_BASE_URL}${endpoint}`;
+    const response = await fetch(url, {
+        method: 'POST',
+        credentials: 'include',
+        body: formData,
+    });
+    const isJson = response.headers.get('content-type')?.includes('application/json');
+    const data = isJson ? await response.json() : null;
+    if (!response.ok) {
+        const error = (data && data.error) || response.statusText;
+        throw new Error(error);
+    }
+    return data;
+}
+
 // Named API groupings for easy access
 export const api = {
     documents: {
@@ -81,7 +98,8 @@ export const api = {
         generate: (payload) => fetchApi('/documents/generate', {
             method: 'POST',
             body: JSON.stringify(payload)
-        })
+        }),
+        generateWithFiles: (formData) => fetchFormData('/documents/generate', formData)
     },
 
     approvals: {
@@ -100,11 +118,12 @@ export const api = {
             return fetchApi(`/approvals/pending/count${qs ? '?' + qs : ''}`);
         },
         completed: () => fetchApi('/approvals/completed'),
-        action: (id, actionType, comment) => fetchApi(`/approvals/${id}/action`, {
+        action: (id, actionType, comment, signatureConfig) => fetchApi(`/approvals/${id}/action`, {
             method: 'POST',
-            body: JSON.stringify({ action: actionType, comment })
+            body: JSON.stringify({ action: actionType, comment, signatureConfig })
         }),
-        sync: () => fetchApi('/approvals/sync', { method: 'POST' })
+        sync: () => fetchApi('/approvals/sync', { method: 'POST' }),
+        signatureHint: (documentId) => fetchApi(`/approvals/${documentId}/signature-hint`),
     },
 
     admin: {

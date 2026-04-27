@@ -75,8 +75,13 @@ export default function Navbar({ sidebarWidth, onMobileMenuOpen }) {
     }, [searchQuery]);
 
     const handleSignOut = async () => {
-        await authClient.signOut();
-        navigate('/login');
+        try {
+            await authClient.signOut();
+        } catch (err) {
+            console.error("Sign out failed on server, redirecting anyway", err);
+        } finally {
+            navigate('/login');
+        }
     };
 
     const getPageName = () => {

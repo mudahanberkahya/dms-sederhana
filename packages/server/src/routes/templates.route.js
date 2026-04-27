@@ -5,8 +5,9 @@ import { documentTemplate } from '../db/schema.js';
 import { eq, desc } from 'drizzle-orm';
 import multer from 'multer';
 import crypto from 'crypto';
-import path from 'path';
+import { PDFDocument } from 'pdf-lib';
 import fs from 'fs';
+import path from 'path';
 
 const router = express.Router();
 
@@ -92,10 +93,37 @@ router.post('/', requireAuth, upload.single('templateFile'), async (req, res) =>
         let parsedFieldsConfig = [];
         try {
             if (fieldsConfig) {
+                // If Frontend sent manual configuration mapping, prioritize it!
                 parsedFieldsConfig = JSON.parse(fieldsConfig);
+            } else {
+                // Auto-extract AcroForm fields directly from the uploaded Nitro PDF as a fallback
+                const pdfBytes = fs.readFileSync(req.file.path);
+                const pdfDoc = await PDFDocument.load(pdfBytes);
+                const form = pdfDoc.getForm();
+                const fields = form.getFields();
+                
+                if (fields.length > 0) {
+                    parsedFieldsConfig = fields.map(f => {
+                        const fieldName = f.getName();
+                        let type = 'text';
+                        if (fieldName.toLowerCase().includes('price') || fieldName.toLowerCase().includes('qty') || fieldName.toLowerCase().includes('amount') || fieldName.toLowerCase().includes('total')) {
+                            type = 'number';
+                        } else if (fieldName.toLowerCase().includes('date')) {
+                            type = 'date';
+                        } else if (fieldName.toLowerCase().includes('note') || fieldName.toLowerCase().includes('desc')) {
+                            type = 'textarea';
+                        }
+                        return {
+                            name: fieldName,
+                            label: fieldName.replace(/_/g, ' '),
+                            type: type,
+                            page: 1
+                        };
+                    });
+                }
             }
         } catch (err) {
-            console.warn("Failed to parse fieldsConfig", err);
+            console.warn("Failed to parse fieldsConfig or read PDF form", err);
             // Ignore error, use default []
         }
 
@@ -115,6 +143,47 @@ router.post('/', requireAuth, upload.single('templateFile'), async (req, res) =>
             } catch (unlinkErr) { }
         }
         res.status(500).json({ error: err.message || "Failed to create template" });
+    }
+});
+
+// POST /api/admin/templates/extract-fields (Extract AcroForm fields for frontend mapping)
+router.post('/extract-fields', requireAuth, upload.single('templateFile'), async (req, res) => {
+    try {
+        if (!req.file) {
+            return res.status(400).json({ error: "No PDF file uploaded" });
+        }
+
+        const pdfBytes = fs.readFileSync(req.file.path);
+        const pdfDoc = await PDFDocument.load(pdfBytes);
+        const form = pdfDoc.getForm();
+        const fields = form.getFields();
+
+        const extracted = fields.map(f => {
+            const fieldName = f.getName();
+            let type = 'text';
+            if (fieldName.toLowerCase().includes('price') || fieldName.toLowerCase().includes('qty') || fieldName.toLowerCase().includes('amount') || fieldName.toLowerCase().includes('total')) {
+                type = 'number';
+            } else if (fieldName.toLowerCase().includes('date')) {
+                type = 'date';
+            } else if (fieldName.toLowerCase().includes('note') || fieldName.toLowerCase().includes('desc')) {
+                type = 'textarea';
+            }
+            return {
+                name: fieldName,
+                label: fieldName.replace(/_/g, ' '),
+                type: type,
+                page: 1
+            };
+        });
+
+        // Cleanup the temporary file
+        if (req.file && fs.existsSync(req.file.path)) fs.unlinkSync(req.file.path);
+
+        res.json({ fieldsConfig: extracted });
+    } catch (err) {
+        console.error("Extract Fields Error:", err);
+        if (req.file && fs.existsSync(req.file.path)) fs.unlinkSync(req.file.path);
+        res.status(500).json({ error: "Failed to extract fields from PDF" });
     }
 });
 

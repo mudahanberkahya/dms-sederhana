@@ -17,6 +17,7 @@ import {
     Trash2
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import ApprovalSignatureModal from '../components/ApprovalSignatureModal';
 import './DocumentDetail.css';
 
 const StatusIcon = ({ status }) => {
@@ -41,6 +42,9 @@ export default function DocumentDetail() {
     const [pdfLoading, setPdfLoading] = useState(false);
     const [pdfError, setPdfError] = useState(false);
     const [actionComment, setActionComment] = useState('');
+    const [showSignatureModal, setShowSignatureModal] = useState(false);
+    const [blobVersion, setBlobVersion] = useState(0); // cache-bust counter
+    const [signatureHint, setSignatureHint] = useState(null); // keyword offset data
     const navigate = useNavigate();
 
     const handleDelete = async () => {
@@ -59,6 +63,7 @@ export default function DocumentDetail() {
         try {
             const data = await api.documents.get(id);
             setDocData(data);
+            setBlobVersion(v => v + 1); // trigger PDF blob re-fetch
 
             if (data.approvalChain && data.approvalChain.length > 0) {
                 const mappedSteps = data.approvalChain.map((aStep) => {
@@ -92,8 +97,24 @@ export default function DocumentDetail() {
         }
     };
 
-    const handleAction = async (actionType) => {
-        if (!window.confirm(`Are you sure you want to ${actionType} this document?`)) return;
+    const handleAction = async (actionType, signatureConfig = null) => {
+        if (actionType === 'approve' && !signatureConfig) {
+            // Fetch keyword offset hint before opening modal
+            try {
+                const hint = await api.approvals.signatureHint(id);
+                setSignatureHint(hint);
+            } catch (err) {
+                console.warn('Failed to fetch signature hint, using defaults:', err);
+                setSignatureHint({ offset_x: 0, offset_y: 0, page: 1 });
+            }
+            setShowSignatureModal(true);
+            return;
+        }
+
+        if (actionType === 'reject') {
+            if (!window.confirm('Are you sure you want to reject this document?')) return;
+        }
+
         setSubmitting(true);
         try {
             const currentStep = approvalSteps.find(s => s.status === 'current');
@@ -102,7 +123,13 @@ export default function DocumentDetail() {
                 setSubmitting(false);
                 return;
             }
-            await api.approvals.action(currentStep.id, actionType, actionComment || `${actionType} via document details page`);
+            await api.approvals.action(
+                currentStep.id, 
+                actionType, 
+                actionComment || `${actionType} via document details page`,
+                signatureConfig
+            );
+            setShowSignatureModal(false);
             await fetchDocDetails();
             if (refreshPendingCount) refreshPendingCount();
             setActionComment('');
@@ -110,6 +137,11 @@ export default function DocumentDetail() {
             alert("Failed to process action: " + err.message);
             setSubmitting(false);
         }
+    };
+
+    // Callback from signature modal
+    const handleSignatureConfirm = ({ signatureConfig }) => {
+        handleAction('approve', signatureConfig);
     };
 
     // Show action buttons if: document is PENDING and user is admin or assigned to the current step
@@ -138,6 +170,11 @@ export default function DocumentDetail() {
         if (docData && (docData.signedFilePath || docData.filePath)) {
             setPdfLoading(true);
             setPdfError(false);
+            // Revoke old blob URL to free memory
+            if (pdfBlobUrl) {
+                URL.revokeObjectURL(pdfBlobUrl);
+                setPdfBlobUrl(null);
+            }
             api.documents.getFileBlob(id)
                 .then(blob => {
                     const url = URL.createObjectURL(blob);
@@ -151,7 +188,7 @@ export default function DocumentDetail() {
                     setPdfLoading(false);
                 });
         }
-    }, [docData, id]);
+    }, [docData, id, blobVersion]);
 
     // Cleanup Blob URL on unmount
     useEffect(() => {
@@ -383,6 +420,23 @@ export default function DocumentDetail() {
                     )}
                 </div>
             </div>
+
+            {/* Visual Signature Modal */}
+            {showSignatureModal && (
+                <ApprovalSignatureModal
+                    pdfBlobUrl={pdfBlobUrl}
+                    documentId={id}
+                    onConfirm={handleSignatureConfirm}
+                    onCancel={() => setShowSignatureModal(false)}
+                    submitting={submitting}
+                    comment={actionComment}
+                    initialPosition={signatureHint ? {
+                        x: signatureHint.offset_x || 0,
+                        y: signatureHint.offset_y || 0,
+                    } : null}
+                    initialPage={signatureHint?.page || 1}
+                />
+            )}
         </div>
     );
 }

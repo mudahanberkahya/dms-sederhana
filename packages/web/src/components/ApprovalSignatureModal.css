@@ -1,0 +1,159 @@
+/* ===================================
+   Approval Signature Modal — Visual Signature Placement
+   =================================== */
+
+.signature-modal-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 1000;
+    background: rgba(0, 0, 0, 0.6);
+    backdrop-filter: blur(4px);
+    display: flex;
+    align-items: flex-start;
+    justify-content: center;
+    padding: 2vh 1rem;
+    overflow-y: auto;
+}
+
+.signature-modal-content {
+    background: var(--bg-card, #ffffff);
+    border-radius: 16px;
+    border: 1px solid var(--border-color, #e2e8f0);
+    width: 100%;
+    max-width: 860px;
+    max-height: 94vh;
+    overflow-y: auto;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.2);
+    animation: slideUp 0.25s ease-out;
+}
+
+@keyframes slideUp {
+    from { opacity: 0; transform: translateY(24px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+.signature-modal-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 1.25rem 1.5rem;
+    border-bottom: 1px solid var(--border-color, #e2e8f0);
+}
+
+.signature-modal-header h2 {
+    font-size: 1.15rem;
+    font-weight: 600;
+    margin: 0;
+    color: var(--text-primary, #1e293b);
+}
+
+.signature-modal-body {
+    padding: 1.5rem;
+}
+
+.signature-modal-footer {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 0.75rem;
+    padding: 1rem 1.5rem;
+    border-top: 1px solid var(--border-color, #e2e8f0);
+    background: var(--bg-subtle, #f8f9fa);
+    border-radius: 0 0 16px 16px;
+}
+
+/* PDF Viewer for Signature */
+.signature-pdf-container {
+    position: relative;
+    border: 2px solid var(--border-color, #e2e8f0);
+    border-radius: 10px;
+    overflow: hidden;
+    background: #f1f5f9;
+    min-height: 400px;
+}
+
+.signature-pdf-container .react-pdf__Page canvas {
+    width: 100% !important;
+    height: auto !important;
+}
+
+/* Signature Drag Box */
+.signature-drag-box {
+    border: 2px dashed #7c3aed;
+    background: rgba(124, 58, 237, 0.08);
+    border-radius: 6px;
+    cursor: move;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
+    z-index: 10;
+    transition: background 0.15s ease, box-shadow 0.15s ease;
+}
+
+.signature-drag-box:hover {
+    background: rgba(124, 58, 237, 0.15);
+    box-shadow: 0 0 0 3px rgba(124, 58, 237, 0.2);
+}
+
+.signature-drag-box .sig-label {
+    font-size: 0.7rem;
+    font-weight: 600;
+    color: #7c3aed;
+    pointer-events: none;
+    user-select: none;
+    text-align: center;
+    line-height: 1.2;
+}
+
+.signature-drag-box .sig-icon {
+    color: #7c3aed;
+    opacity: 0.7;
+    pointer-events: none;
+}
+
+/* Instructions text */
+.signature-instructions {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.625rem 0.875rem;
+    background: rgba(124, 58, 237, 0.06);
+    border: 1px solid rgba(124, 58, 237, 0.15);
+    border-radius: 8px;
+    margin-bottom: 0.75rem;
+    font-size: 0.85rem;
+    color: #7c3aed;
+    font-weight: 500;
+}
+
+.signature-instructions .info-icon {
+    flex-shrink: 0;
+}
+
+/* Page navigation for signature */
+.signature-pagination {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.75rem;
+    padding: 0.5rem;
+    font-size: 0.85rem;
+    color: var(--text-secondary, #64748b);
+}
+
+.signature-pagination button {
+    padding: 0.25rem 0.5rem;
+}
+
+/* Loading state inside modal */
+.signature-loading {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 0.75rem;
+    padding: 4rem 2rem;
+    color: var(--text-muted, #94a3b8);
+}
