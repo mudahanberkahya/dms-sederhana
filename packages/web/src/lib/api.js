@@ -99,7 +99,8 @@ export const api = {
             method: 'POST',
             body: JSON.stringify(payload)
         }),
-        generateWithFiles: (formData) => fetchFormData('/documents/generate', formData)
+        generateWithFiles: (formData) => fetchFormData('/documents/generate', formData),
+        previewGenerateWithFiles: (formData) => fetchBlob('/documents/generate', { method: 'POST', body: formData })
     },
 
     approvals: {

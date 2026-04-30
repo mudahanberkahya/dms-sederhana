@@ -79,7 +79,7 @@ router.post('/', requireAuth, upload.single('templateFile'), async (req, res) =>
             return res.status(403).json({ error: "Forbidden: Only administrators can upload templates" });
         }
 
-        const { name, fieldsConfig } = req.body;
+        const { name, fieldsConfig, requireCreatorSignature } = req.body;
         
         if (!req.file) {
             return res.status(400).json({ error: "No PDF template file uploaded" });
@@ -115,7 +115,7 @@ router.post('/', requireAuth, upload.single('templateFile'), async (req, res) =>
                         }
                         return {
                             name: fieldName,
-                            label: fieldName.replace(/_/g, ' '),
+                            label: fieldName.replace(/^undefined\./, '').replace(/_/g, ' '),
                             type: type,
                             page: 1
                         };
@@ -131,7 +131,8 @@ router.post('/', requireAuth, upload.single('templateFile'), async (req, res) =>
             name,
             filePath: req.file.path,
             fieldsConfig: parsedFieldsConfig,
-            isActive: true
+            isActive: true,
+            requireCreatorSignature: requireCreatorSignature === 'true' || requireCreatorSignature === true
         }).returning();
 
         res.status(201).json(newTemplate);
@@ -170,7 +171,7 @@ router.post('/extract-fields', requireAuth, upload.single('templateFile'), async
             }
             return {
                 name: fieldName,
-                label: fieldName.replace(/_/g, ' '),
+                label: fieldName.replace(/^undefined\./, '').replace(/_/g, ' '),
                 type: type,
                 page: 1
             };
@@ -195,11 +196,12 @@ router.put('/:id', requireAuth, async (req, res) => {
             return res.status(403).json({ error: "Forbidden: Only administrators can update templates" });
         }
 
-        const { name, fieldsConfig, isActive } = req.body;
+        const { name, fieldsConfig, isActive, requireCreatorSignature } = req.body;
         const updateData = { updatedAt: new Date() };
 
         if (name !== undefined) updateData.name = name;
         if (isActive !== undefined) updateData.isActive = isActive;
+        if (requireCreatorSignature !== undefined) updateData.requireCreatorSignature = requireCreatorSignature;
         if (fieldsConfig !== undefined) updateData.fieldsConfig = fieldsConfig;
 
         const [updatedTemplate] = await db.update(documentTemplate)

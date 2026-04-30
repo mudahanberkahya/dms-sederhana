@@ -183,6 +183,7 @@ export const documentTemplate = pgTable("document_template", {
     filePath: text("file_path").notNull(),
     fieldsConfig: json("fields_config"), // JSON array of fields e.g [{name: "to", label: "To", type: "text"}]
     isActive: boolean("is_active").default(true).notNull(),
+    requireCreatorSignature: boolean("require_creator_signature").default(false).notNull(),
     createdAt: timestamp("created_at").defaultNow().notNull(),
     updatedAt: timestamp("updated_at").defaultNow().notNull()
 });

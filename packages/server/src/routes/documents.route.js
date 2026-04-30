@@ -4,7 +4,7 @@ import { DocumentService } from '../services/document.service.js';
 import { WorkflowService } from '../services/workflow.service.js';
 import { LogService } from '../services/log.service.js';
 import { db } from '../db/index.js';
-import { userProfile, documentTemplate } from '../db/schema.js';
+import { userProfile, documentTemplate, signature } from '../db/schema.js';
 import { eq } from 'drizzle-orm';
 import multer from 'multer';
 import crypto from 'crypto';
@@ -134,6 +134,32 @@ router.get('/:id/file', requireAuth, async (req, res) => {
     } catch (err) {
         console.error("Serve File Error:", err);
         res.status(500).json({ error: "Failed to serve the requested document file." });
+    }
+});
+
+// GET /api/documents/template/:id/file (Stream base template PDF for preview modal)
+router.get('/template/:id/file', requireAuth, async (req, res) => {
+    try {
+        const [template] = await db.select().from(documentTemplate).where(eq(documentTemplate.id, req.params.id));
+        if (!template) {
+            return res.status(404).json({ error: "Template not found" });
+        }
+
+        const filePath = template.filePath;
+        if (!filePath || !fs.existsSync(filePath)) {
+            return res.status(404).json({ error: "No physical file found for this template" });
+        }
+
+        const stat = fs.statSync(filePath);
+        res.setHeader('Content-Length', stat.size);
+        res.setHeader('Content-Type', 'application/pdf');
+        res.setHeader('Content-Disposition', `inline; filename="template-${template.name.replace(/[^a-zA-Z0-9_-]/g, '_')}.pdf"`);
+
+        const readStream = fs.createReadStream(filePath);
+        readStream.pipe(res);
+    } catch (err) {
+        console.error("Download Template File Error:", err);
+        res.status(500).json({ error: "Failed to download template file" });
     }
 });
 
@@ -388,6 +414,8 @@ router.post('/generate', requireAuth, generateUpload.array('attachments', 10), a
         const department = req.body.department || null;
         const notes = req.body.notes || null;
         const subCategory = req.body.subCategory || null;
+        const signatureCoordsStr = req.body.signatureCoords || null;
+        const isPreview = req.body.isPreview === 'true';
         
         let formData = {};
         try {
@@ -455,9 +483,13 @@ router.post('/generate', requireAuth, generateUpload.array('attachments', 10), a
                 if (!value && value !== 0) continue;
                 
                 try {
-                    // Ignore predefined prefix check, just match the exact name
-                    const field = form.getTextField(key);
-                    if (field) {
+                    // Because PDF dictionary structure can be corrupted, getting fields can crash
+                    let field = null;
+                    try { field = form.getTextField(key); } catch (e) {}
+                    if (!field) {
+                        try { field = form.getField(key); } catch (e) {}
+                    }
+                    if (field && typeof field.setText === 'function') {
                         field.setText(String(value));
                     }
                 } catch (e) {
@@ -467,7 +499,76 @@ router.post('/generate', requireAuth, generateUpload.array('attachments', 10), a
         }
         
         // Flatten the form to burn the text permanently into the PDF layer
-        form.flatten();
+        try {
+            form.flatten();
+        } catch (flattenErr) {
+            console.warn(`[DocGen] Flattening failed, locking fields instead:`, flattenErr.message);
+            // Fallback: make fields read-only
+            try {
+                for (const field of form.getFields()) {
+                    try { field.enableReadOnly(); } catch (e) {}
+                }
+            } catch (fallbackErr) {
+                console.warn("[DocGen] Fallback read-only also failed:", fallbackErr.message);
+            }
+        }
+
+        // ===== CREATOR SIGNATURE REQUIREMENT =====
+        let parsedCoords = null;
+        if (signatureCoordsStr) {
+            try {
+                parsedCoords = JSON.parse(signatureCoordsStr);
+            } catch (e) {
+                console.warn("[DocGen] Failed to parse signatureCoords:", e.message);
+            }
+        }
+
+        if (parsedCoords && parsedCoords.pageIndex !== undefined && parsedCoords.x !== undefined && parsedCoords.y !== undefined) {
+            // Retrieve Creator's Signature
+            const [sigRecord] = await db.select().from(signature).where(eq(signature.userId, req.user.id)).limit(1);
+            if (!sigRecord) {
+                return res.status(400).json({ error: "Your account does not have a signature configured. Please contact the administrator." });
+            }
+
+            const signaturePath = sigRecord.imagePath;
+            if (fs.existsSync(signaturePath)) {
+                try {
+                    const signatureBytes = fs.readFileSync(signaturePath);
+                    let embeddedSig;
+                    if (signaturePath.toLowerCase().endsWith('.png')) {
+                        embeddedSig = await pdfDoc.embedPng(signatureBytes);
+                    } else {
+                        embeddedSig = await pdfDoc.embedJpg(signatureBytes);
+                    }
+
+                    const targetPage = pdfDoc.getPage(parsedCoords.pageIndex);
+                    // Standard visual signature width = 120px
+                    const drawWidth = 120;
+                    const aspect = embeddedSig.width / embeddedSig.height;
+                    const drawHeight = drawWidth / aspect;
+
+                    // Note: Coordinates from React-PDF are from top-left, pdf-lib is from bottom-left
+                    // We must convert Y correctly!
+                    const { height } = targetPage.getSize();
+                    // domYToPdfY handles React-PDF relative -> PDF-lib absolute Y translation
+                    // If parsedCoords.y is already raw PDF coordinate (from SignatureOverlay math), we might just use it.
+                    // Wait, we can reuse logic from ApprovalSignatureModal / approval.service.js!
+                    // In approval.service.js: 
+                    // pdfY = pageHeight - y - boxHeight
+                    
+                    targetPage.drawImage(embeddedSig, {
+                        x: parsedCoords.x,
+                        y: parsedCoords.y,
+                        width: drawWidth,
+                        height: drawHeight,
+                    });
+                } catch (sigErr) {
+                    console.warn("[DocGen] Failed to embed creator signature:", sigErr.message);
+                }
+            } else {
+                console.warn("[DocGen] Creator signature image file missing:", signaturePath);
+            }
+        }
 
         // ===== IMAGE ATTACHMENTS — Embed as grid pages =====
         const attachments = req.files || [];
@@ -540,7 +641,19 @@ router.post('/generate', requireAuth, generateUpload.array('attachments', 10), a
         }
 
         // ===== SAVE GENERATED PDF =====
-        const flatPdfBytes = await pdfDoc.save();
+        let flatPdfBytes;
+        try {
+            flatPdfBytes = await pdfDoc.save();
+        } catch (saveErr) {
+            console.warn("[DocGen] Regular PDF save failed. Falling back to save without appearance updates:", saveErr.message);
+            flatPdfBytes = await pdfDoc.save({ updateFieldAppearances: false });
+        }
+
+        if (isPreview) {
+            res.setHeader('Content-Length', flatPdfBytes.length);
+            res.setHeader('Content-Type', 'application/pdf');
+            return res.send(Buffer.from(flatPdfBytes));
+        }
 
         const pendingPath = path.join(process.env.DOCUMENT_STORAGE_PATH || './storage/documents', 'pending');
         if (!fs.existsSync(pendingPath)) {

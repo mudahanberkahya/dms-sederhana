@@ -13,6 +13,7 @@ import {
     ImagePlus
 } from 'lucide-react';
 import ReactQuill from 'react-quill-new';
+import CreatorSignatureModal from '../components/CreatorSignatureModal';
 import 'react-quill-new/dist/quill.snow.css';
 import './Upload.css';
 
@@ -48,6 +49,9 @@ export default function Upload() {
 
     const [isUploading, setIsUploading] = useState(false);
     const [error, setError] = useState('');
+    const [showSignatureModal, setShowSignatureModal] = useState(false);
+    const [signatureCoords, setSignatureCoords] = useState(null);
+    const [previewPdfUrl, setPreviewPdfUrl] = useState(null);
 
     useEffect(() => {
         // Fetch templates
@@ -157,6 +161,49 @@ export default function Upload() {
         setIsUploading(true);
         setError('');
 
+        if (uploadMode === 'template') {
+            const activeTpl = availableTemplates.find(t => t.id === selectedTemplateId);
+            if (activeTpl?.requireCreatorSignature && !signatureCoords) {
+                // Generate a preview filled PDF to show in the modal
+                try {
+                    const fd = new FormData();
+                    fd.append('templateId', selectedTemplateId);
+                    fd.append('formData', JSON.stringify(templateFormData));
+                    fd.append('documentTitle', documentTitle);
+                    fd.append('title', activeTpl?.name || '');
+                    fd.append('category', category);
+                    fd.append('branch', branch);
+                    fd.append('department', department);
+                    if (subCategory) fd.append('subCategory', subCategory);
+                    if (notes) fd.append('notes', notes);
+                    if (Object.keys(dynamicDepts).length > 0) {
+                        fd.append('dynamicDepartments', JSON.stringify(
+                            Object.keys(dynamicDepts).map(order => ({ stepOrder: parseInt(order), department: dynamicDepts[order] }))
+                        ));
+                    }
+                    fd.append('isPreview', 'true');
+                    
+                    const blob = await api.documents.previewGenerateWithFiles(fd);
+                    const url = URL.createObjectURL(blob);
+                    setPreviewPdfUrl(url);
+                    setShowSignatureModal(true);
+                } catch (err) {
+                    console.error("Preview generation failed", err);
+                    setError("Gagal membuat preview dokumen: " + err.message);
+                } finally {
+                    setIsUploading(false);
+                }
+                return;
+            }
+        }
+
+        executeSubmit(signatureCoords);
+    };
+
+    const executeSubmit = async (coords = null) => {
+        setIsUploading(true);
+        setError('');
+
         try {
             if (uploadMode === 'manual') {
                 const formData = new FormData();
@@ -195,6 +242,9 @@ export default function Upload() {
                 for (const imgFile of attachmentFiles) {
                     fd.append('attachments', imgFile);
                 }
+                if (coords) {
+                    fd.append('signatureCoords', JSON.stringify(coords));
+                }
                 await api.documents.generateWithFiles(fd);
             }
 
@@ -222,6 +272,24 @@ export default function Upload() {
 
     return (
         <div className="upload-page">
+            {showSignatureModal && (
+                <CreatorSignatureModal 
+                    pdfBlobUrl={previewPdfUrl}
+                    onConfirm={({ signatureConfig }) => {
+                        setSignatureCoords(signatureConfig);
+                        setShowSignatureModal(false);
+                        executeSubmit(signatureConfig);
+                    }}
+                    onCancel={() => {
+                        setShowSignatureModal(false);
+                        if (previewPdfUrl) {
+                            URL.revokeObjectURL(previewPdfUrl);
+                            setPreviewPdfUrl(null);
+                        }
+                    }}
+                    submitting={isUploading}
+                />
+            )}
             <div className="page-header">
                 <div>
                     <h1 className="page-title">Create Document</h1>

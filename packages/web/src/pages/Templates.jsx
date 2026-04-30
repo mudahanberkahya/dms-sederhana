@@ -10,11 +10,14 @@ export default function Templates() {
 
     const [showModal, setShowModal] = useState(false);
     const [name, setName] = useState('');
+    const [requireCreatorSignature, setRequireCreatorSignature] = useState(false);
     const [file, setFile] = useState(null);
     const [isSaving, setIsSaving] = useState(false);
     const [parsedFields, setParsedFields] = useState([]);
     const [isExtracting, setIsExtracting] = useState(false);
     const [editTemplateId, setEditTemplateId] = useState(null);
+    const [configMode, setConfigMode] = useState('visual');
+    const [jsonConfig, setJsonConfig] = useState('');
 
     const loadTemplates = async () => {
         try {
@@ -46,6 +49,7 @@ export default function Templates() {
                 const res = await api.admin.templates.extractFields(formData);
                 if (res && res.fieldsConfig) {
                     setParsedFields(res.fieldsConfig);
+                    setJsonConfig(JSON.stringify(res.fieldsConfig, null, 2));
                 }
             } catch (err) {
                 console.error("Failed to extract fields:", err);
@@ -61,14 +65,18 @@ export default function Templates() {
         setShowModal(false);
         setEditTemplateId(null);
         setName('');
+        setRequireCreatorSignature(false);
         setFile(null);
         setParsedFields([]);
+        setJsonConfig('');
+        setConfigMode('visual');
         setError(null);
     };
 
     const openEditModal = (t) => {
         setEditTemplateId(t.id);
         setName(t.name);
+        setRequireCreatorSignature(t.requireCreatorSignature || false);
         setFile(null);
         // Ensure sorted by existing order if present
         let config = t.fieldsConfig || [];
@@ -76,6 +84,8 @@ export default function Templates() {
             config = [...config].sort((a, b) => a.order - b.order);
         }
         setParsedFields(config);
+        setJsonConfig(JSON.stringify(config, null, 2));
+        setConfigMode('visual');
         setShowModal(true);
     };
 
@@ -127,9 +137,18 @@ export default function Templates() {
         try {
             const formData = new FormData();
             formData.append('name', name);
+            formData.append('requireCreatorSignature', requireCreatorSignature);
             if (file) formData.append('templateFile', file);
             
-            if (parsedFields.length > 0) {
+            if (configMode === 'json' && jsonConfig.trim()) {
+                try {
+                    const parsedJson = JSON.parse(jsonConfig);
+                    formData.append('fieldsConfig', JSON.stringify(parsedJson));
+                } catch (e) {
+                    setIsSaving(false);
+                    return setError("Format JSON Konfigurasi tidak valid: " + e.message);
+                }
+            } else if (parsedFields.length > 0) {
                 // Ensure array order explicitly sets the 'order' integer
                 const orderedFields = parsedFields.map((f, i) => ({ ...f, order: i + 1 }));
                 formData.append('fieldsConfig', JSON.stringify(orderedFields));
@@ -143,8 +162,11 @@ export default function Templates() {
                     await api.admin.templates.update(editTemplateId, formData);
                 } else {
                     // Update without file -> JSON payload
-                    payload = { name };
-                    if (parsedFields.length > 0) {
+                    payload = { name, requireCreatorSignature };
+                    
+                    if (configMode === 'json' && jsonConfig.trim()) {
+                        payload.fieldsConfig = JSON.parse(jsonConfig);
+                    } else if (parsedFields.length > 0) {
                         payload.fieldsConfig = parsedFields.map((f, i) => ({ ...f, order: i + 1 }));
                     }
                     await api.admin.templates.update(editTemplateId, payload);
@@ -289,6 +311,21 @@ export default function Templates() {
                                             : "DMS secara otomatis akan membaca Text Field (AcroForms) yang ada di dalam PDF tersebut menggunakan nama field-nya."}
                                     </p>
                                 </div>
+                                <div className="form-group" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', background: 'var(--bg-secondary)', padding: '1rem', borderRadius: 'var(--radius-md)' }}>
+                                    <input
+                                        type="checkbox"
+                                        id="requireCreatorSignature"
+                                        checked={requireCreatorSignature}
+                                        onChange={e => setRequireCreatorSignature(e.target.checked)}
+                                        style={{ width: '1.2rem', height: '1.2rem', cursor: 'pointer' }}
+                                    />
+                                    <label htmlFor="requireCreatorSignature" style={{ margin: 0, fontWeight: 500, cursor: 'pointer' }}>
+                                        Require Creator Signature
+                                        <span style={{ display: 'block', fontSize: '0.85rem', color: 'var(--text-muted)', fontWeight: 400, marginTop: '2px' }}>
+                                            Wajibkan staf/pembuat dokumen (Creator) untuk menempatkan tanda tangannya pada PDF sebelum dokumen disubmit.
+                                        </span>
+                                    </label>
+                                </div>
 
                                 {/* Extracted Fields Configurator */}
                                 {isExtracting && (
@@ -297,13 +334,37 @@ export default function Templates() {
                                     </div>
                                 )}
                                 
-                                {!isExtracting && parsedFields.length > 0 && (
+                                {!isExtracting && (parsedFields.length > 0 || configMode === 'json') && (
                                     <div className="form-group mt-4">
-                                        <label className="form-label">Konfigurasi Kolom Ekstraksi (AcroForms)</label>
-                                        <p className="text-xs text-muted mb-2">
-                                            Berikut adalah komponen field yang otomatis terbaca dari file PDF Anda. Anda bisa mengatur <b>urutan form</b> (↑/↓), mengubah **Tipe Input**, dan memasukkan **Rumus (Formula)** jika tipenya Read-only (contoh rumus: <code>field_harga * field_qty</code>).
-                                        </p>
-                                        <div className="table-responsive">
+                                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem' }}>
+                                            <label className="form-label" style={{ margin: 0 }}>Konfigurasi Kolom Ekstraksi (AcroForms)</label>
+                                            <select 
+                                                className="form-select" 
+                                                style={{ width: 'auto', padding: '0.25rem 0.5rem', fontSize: '0.875rem' }}
+                                                value={configMode}
+                                                onChange={e => {
+                                                    setConfigMode(e.target.value);
+                                                    if (e.target.value === 'json') {
+                                                        setJsonConfig(JSON.stringify(parsedFields, null, 2));
+                                                    } else {
+                                                        try {
+                                                            const arr = JSON.parse(jsonConfig);
+                                                            if (Array.isArray(arr)) setParsedFields(arr);
+                                                        } catch (err) { }
+                                                    }
+                                                }}
+                                            >
+                                                <option value="visual">Visual Mode (Tabel)</option>
+                                                <option value="json">Manual JSON Mode</option>
+                                            </select>
+                                        </div>
+
+                                        {configMode === 'visual' ? (
+                                            <>
+                                                <p className="text-xs text-muted mb-2">
+                                                    Berikut adalah komponen field yang otomatis terbaca dari file PDF Anda. Anda bisa mengatur <b>urutan form</b> (↑/↓), mengubah **Tipe Input**, dan memasukkan **Rumus (Formula)**.
+                                                </p>
+                                                <div className="table-responsive">
                                             <table className="admin-table">
                                                 <thead>
                                                     <tr>
@@ -359,6 +420,20 @@ export default function Templates() {
                                                 </tbody>
                                             </table>
                                         </div>
+                                        </>
+                                        ) : (
+                                            <>
+                                                <p className="text-xs text-muted mb-2">
+                                                    Jika ekstraksi UI tidak berjalan baik atau nama field PDF menggunakan struktur <code>undefined.</code>, Anda dapat menggunakan mode JSON manual.
+                                                </p>
+                                                <textarea 
+                                                    className="form-input" 
+                                                    style={{ fontFamily: 'monospace', fontSize: '13px', minHeight: '300px' }}
+                                                    value={jsonConfig}
+                                                    onChange={e => setJsonConfig(e.target.value)}
+                                                />
+                                            </>
+                                        )}
                                     </div>
                                 )}
                             </div>
