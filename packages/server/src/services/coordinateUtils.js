@@ -22,10 +22,11 @@
  * @returns {number} Y coordinate for pdf-lib (from bottom of page)
  */
 export function domYToPdfY(domY, fieldHeight, pdfPageHeight) {
-    // Return the TOP edge of the field box in PDF space.
-    // DOM: top of field = domY
-    // PDF: top of field = pageHeight - domY
-    return pdfPageHeight - domY;
+    // pdf-lib drawImage positions from the BOTTOM-LEFT corner of the image.
+    // DOM domY is the TOP edge of the box (from top of page).
+    // So the BOTTOM edge of the box in DOM = domY + fieldHeight.
+    // In PDF coords (from bottom): bottom edge = pageHeight - (domY + fieldHeight)
+    return pdfPageHeight - domY - fieldHeight;
 }
 
 /**
