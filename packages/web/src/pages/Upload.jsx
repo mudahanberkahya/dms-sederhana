@@ -166,24 +166,10 @@ export default function Upload() {
             if (activeTpl?.requireCreatorSignature && !signatureCoords) {
                 // Generate a preview filled PDF to show in the modal
                 try {
-                    const fd = new FormData();
-                    fd.append('templateId', selectedTemplateId);
-                    fd.append('formData', JSON.stringify(templateFormData));
-                    fd.append('documentTitle', documentTitle);
-                    fd.append('title', activeTpl?.name || '');
-                    fd.append('category', category);
-                    fd.append('branch', branch);
-                    fd.append('department', department);
-                    if (subCategory) fd.append('subCategory', subCategory);
-                    if (notes) fd.append('notes', notes);
-                    if (Object.keys(dynamicDepts).length > 0) {
-                        fd.append('dynamicDepartments', JSON.stringify(
-                            Object.keys(dynamicDepts).map(order => ({ stepOrder: parseInt(order), department: dynamicDepts[order] }))
-                        ));
-                    }
-                    fd.append('isPreview', 'true');
-                    
-                    const blob = await api.documents.previewGenerateWithFiles(fd);
+                    const blob = await api.documents.draftPreview({
+                        templateId: selectedTemplateId,
+                        formData: templateFormData,
+                    });
                     const url = URL.createObjectURL(blob);
                     setPreviewPdfUrl(url);
                     setShowSignatureModal(true);
@@ -418,6 +404,30 @@ export default function Upload() {
                                                                     style={{ minHeight: '120px' }}
                                                                 />
                                                             </div>
+                                                        ) : field.type === 'checkbox' ? (
+                                                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', background: 'var(--bg-subtle)', padding: '0.75rem', borderRadius: '8px' }}>
+                                                                <input
+                                                                    type="checkbox"
+                                                                    id={`field-${field.name}`}
+                                                                    checked={!!templateFormData[field.name]}
+                                                                    onChange={e => setTemplateFormData(prev => ({ ...prev, [field.name]: e.target.checked }))}
+                                                                    style={{ width: '1.2rem', height: '1.2rem', cursor: 'pointer' }}
+                                                                />
+                                                                <label htmlFor={`field-${field.name}`} style={{ margin: 0, cursor: 'pointer', fontWeight: 500 }}>
+                                                                    Yes, checked
+                                                                </label>
+                                                            </div>
+                                                        ) : field.type === 'select' ? (
+                                                            <select
+                                                                className="form-select"
+                                                                value={templateFormData[field.name] || ''}
+                                                                onChange={e => setTemplateFormData(prev => ({ ...prev, [field.name]: e.target.value }))}
+                                                            >
+                                                                <option value="">— Select {displayLabel} —</option>
+                                                                {(field.options || '').split(',').map(opt => opt.trim()).filter(Boolean).map((opt, idx) => (
+                                                                    <option key={idx} value={opt}>{opt}</option>
+                                                                ))}
+                                                            </select>
                                                         ) : (
                                                             <input 
                                                                 type={isReadonly ? 'text' : field.type || 'text'}

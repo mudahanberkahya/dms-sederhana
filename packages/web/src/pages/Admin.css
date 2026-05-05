@@ -331,7 +331,12 @@
     display: flex;
     gap: 10px;
     justify-content: flex-end;
-    padding: 0 24px 20px;
+    padding: 16px 24px 20px;
+    position: sticky;
+    bottom: 0;
+    background: var(--surface-container-lowest);
+    border-top: 1px solid var(--outline-variant);
+    z-index: 10;
 }
 
 .form-group {
@@ -484,4 +489,12 @@
         transform: rotate(90deg);
         margin: 0;
     }
-}
+} 
+ / *   Q u i l l   E d i t o r   F i x e s   * /  
+ . q l - e d i t o r   {  
+         w o r d - w r a p :   b r e a k - w o r d ;  
+         o v e r f l o w - w r a p :   b r e a k - w o r d ;  
+         w h i t e - s p a c e :   p r e - w r a p ;  
+         w o r d - b r e a k :   b r e a k - w o r d ;  
+ }  
+ 

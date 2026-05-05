@@ -36,8 +36,22 @@ const ProtectedRoute = ({ isAllowed, redirectPath = '/login', children }) => {
 function App() {
   const { data: sessionData, isPending, error } = useSession();
 
+  // Cache user to prevent auto-logout on temporary network errors (e.g. idle/sleep wake up)
+  const [cachedUser, setCachedUser] = useState(null);
+
+  useEffect(() => {
+    if (sessionData?.user) {
+      setCachedUser(sessionData.user);
+    } else if (!isPending && !error) {
+      // Only clear user if there is explicitly no error (e.g. logged out or 401)
+      setCachedUser(null);
+    } else if (error && error.status === 401) {
+      setCachedUser(null);
+    }
+  }, [sessionData, isPending, error]);
+
   // Create a unified user object combining Auth user and DMS profile (branch from context if needed)
-  const user = sessionData?.user;
+  const user = sessionData?.user || cachedUser;
 
   // State for the currently selected branch (useful if user has access to multiple, defaults to their home branch)
   const [currentBranch, setCurrentBranch] = useState('Astara Hotel');

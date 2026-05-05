@@ -7,15 +7,14 @@ import { db } from '../db/index.js';
 import { userProfile, documentTemplate, signature } from '../db/schema.js';
 import { eq } from 'drizzle-orm';
 import multer from 'multer';
-import crypto from 'crypto';
 import path from 'path';
 import fs from 'fs';
-import { PDFDocument, StandardFonts, rgb } from 'pdf-lib';
-import { domYToPdfY } from '../services/coordinateUtils.js';
+import { PDFDocument } from 'pdf-lib';
+import { renderHtmlToPdf } from '../services/puppeteer.service.js';
 
 const router = express.Router();
 
-// Setup Multer for PDF file uploads
+// Setup Multer for manual PDF file uploads (POST /api/documents — manual upload)
 const storage = multer.diskStorage({
     destination: function (req, file, cb) {
         // Upload to a temporary pending folder
@@ -34,6 +33,16 @@ const storage = multer.diskStorage({
     }
 });
 const upload = multer({ storage: storage });
+
+// Multer config for /generate endpoint (image attachments only)
+const generateUpload = multer({
+    storage: multer.memoryStorage(), // keep in memory for embedding into PDF
+    limits: { fileSize: 10 * 1024 * 1024 }, // 10MB per file
+    fileFilter: (req, file, cb) => {
+        if (file.mimetype.startsWith('image/')) cb(null, true);
+        else cb(new Error('Only image files are allowed as attachments'), false);
+    }
+});
 
 // Prefix: /api/documents
 
@@ -137,33 +146,41 @@ router.get('/:id/file', requireAuth, async (req, res) => {
     }
 });
 
-// GET /api/documents/template/:id/file (Stream base template PDF for preview modal)
-router.get('/template/:id/file', requireAuth, async (req, res) => {
+// =====================================================================
+// POST /api/documents/draft-preview (Generate a preview PDF from template)
+// Returns PDF buffer directly for the CreatorSignatureModal
+// =====================================================================
+router.post('/draft-preview', requireAuth, async (req, res) => {
     try {
-        const [template] = await db.select().from(documentTemplate).where(eq(documentTemplate.id, req.params.id));
+        const { templateId, formData } = req.body;
+
+        if (!templateId) {
+            return res.status(400).json({ error: "Missing required field: templateId" });
+        }
+
+        const [template] = await db.select().from(documentTemplate).where(eq(documentTemplate.id, templateId));
         if (!template) {
             return res.status(404).json({ error: "Template not found" });
         }
-
-        const filePath = template.filePath;
-        if (!filePath || !fs.existsSync(filePath)) {
-            return res.status(404).json({ error: "No physical file found for this template" });
+        if (!template.htmlContent) {
+            return res.status(400).json({ error: "Template has no HTML content configured." });
         }
 
-        const stat = fs.statSync(filePath);
-        res.setHeader('Content-Length', stat.size);
-        res.setHeader('Content-Type', 'application/pdf');
-        res.setHeader('Content-Disposition', `inline; filename="template-${template.name.replace(/[^a-zA-Z0-9_-]/g, '_')}.pdf"`);
+        const pdfBuffer = await renderHtmlToPdf(
+            template.htmlContent,
+            formData || {},
+            { orientation: template.orientation || 'portrait' }
+        );
 
-        const readStream = fs.createReadStream(filePath);
-        readStream.pipe(res);
+        console.log(`[DocGen] Draft preview generated for template "${template.name}" (${pdfBuffer.length} bytes)`);
+        res.contentType('application/pdf').send(pdfBuffer);
     } catch (err) {
-        console.error("Download Template File Error:", err);
-        res.status(500).json({ error: "Failed to download template file" });
+        console.error("Draft Preview Error:", err);
+        res.status(500).json({ error: err.message || "Failed to generate draft preview" });
     }
 });
 
-// POST /api/documents (Upload new document)
+// POST /api/documents (Upload new document — manual PDF upload)
 router.post('/', requireAuth, upload.single('documentFile'), async (req, res) => {
     try {
         const { title, category, branch, department, notes, subCategory } = req.body;
@@ -229,181 +246,9 @@ router.post('/', requireAuth, upload.single('documentFile'), async (req, res) =>
 });
 
 // =====================================================================
-// HTML Rich Text → pdf-lib Text Runs Parser
-// Parses HTML from ReactQuill and returns styled text segments.
+// POST /api/documents/generate (Generate document from HTML template)
+// Pipeline: Handlebars compile → Puppeteer render → pdf-lib stamp/attach
 // =====================================================================
-function parseHtmlToRuns(html) {
-    if (!html || typeof html !== 'string') return [{ text: String(html || ''), bold: false, italic: false, underline: false }];
-    
-    // Check if content has any HTML tags at all
-    if (!/<[^>]+>/.test(html)) {
-        return [{ text: html, bold: false, italic: false, underline: false }];
-    }
-
-    const runs = [];
-    // Replace common HTML entities
-    let cleaned = html.replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&nbsp;/g, ' ').replace(/&quot;/g, '"');
-    // Replace <br>, <br/>, </p><p> with newline markers
-    cleaned = cleaned.replace(/<br\s*\/?>/gi, '\n');
-    cleaned = cleaned.replace(/<\/p>\s*<p[^>]*>/gi, '\n');
-    // Remove opening <p> and closing </p> at boundaries
-    cleaned = cleaned.replace(/^<p[^>]*>/i, '').replace(/<\/p>$/i, '');
-    // Handle lists: <li> becomes "• " with newline
-    cleaned = cleaned.replace(/<li[^>]*>/gi, '\n• ').replace(/<\/li>/gi, '');
-    cleaned = cleaned.replace(/<\/?(?:ul|ol)[^>]*>/gi, '');
-
-    // Now parse inline tags: <strong>, <b>, <em>, <i>, <u>, <span>
-    // Use a simple state-machine approach
-    let pos = 0;
-    let bold = false, italic = false, underline = false;
-    const tagRegex = /<(\/?)(\w+)([^>]*)>/g;
-    let match;
-    
-    while ((match = tagRegex.exec(cleaned)) !== null) {
-        // Text before the tag
-        if (match.index > pos) {
-            const text = cleaned.substring(pos, match.index);
-            if (text) runs.push({ text, bold, italic, underline });
-        }
-        
-        const isClosing = match[1] === '/';
-        const tagName = match[2].toLowerCase();
-        
-        if (tagName === 'strong' || tagName === 'b') bold = !isClosing;
-        else if (tagName === 'em' || tagName === 'i') italic = !isClosing;
-        else if (tagName === 'u') underline = !isClosing;
-        // span with style could carry more, but we'll keep it simple
-        
-        pos = match.index + match[0].length;
-    }
-    
-    // Remaining text after last tag
-    if (pos < cleaned.length) {
-        const text = cleaned.substring(pos);
-        if (text) runs.push({ text, bold, italic, underline });
-    }
-    
-    if (runs.length === 0) {
-        // Fallback: strip all tags and return as plain text
-        const stripped = cleaned.replace(/<[^>]*>/g, '');
-        runs.push({ text: stripped, bold: false, italic: false, underline: false });
-    }
-    
-    return runs;
-}
-
-// =====================================================================
-// Rich Text Field Drawer with Multi-Page Overflow
-// Draws styled text runs onto PDF pages, auto-creating new pages
-// when text exceeds available space.
-// =====================================================================
-function drawRichTextField(pdfDoc, fonts, startPageIndex, startX, startY, maxWidth, runs, fontSize, bottomMargin) {
-    const lineHeight = fontSize * 1.4;
-    // startY is the TOP edge of the box. Baseline starts one fontSize lower.
-    let cursorY = startY - fontSize;
-    let currentPageIndex = startPageIndex;
-    let page = pdfDoc.getPage(currentPageIndex);
-    const { width: pageWidth, height: pageHeight } = page.getSize();
-    const bm = bottomMargin || 40;
-
-    function getFont(run) {
-        if (run.bold && run.italic) return fonts.boldItalic;
-        if (run.bold) return fonts.bold;
-        if (run.italic) return fonts.italic;
-        return fonts.regular;
-    }
-
-    function ensureSpace() {
-        if (cursorY < bm) {
-            // Add a new blank page with same dimensions
-            page = pdfDoc.addPage([pageWidth, pageHeight]);
-            currentPageIndex = pdfDoc.getPageCount() - 1;
-            cursorY = pageHeight - 50; // top margin on new page
-        }
-    }
-
-    // Flatten runs into words with their styling for wrapping
-    const allWords = [];
-    for (const run of runs) {
-        const parts = run.text.split(/(\n)/); // split by newlines, keeping them
-        for (const part of parts) {
-            if (part === '\n') {
-                allWords.push({ text: '\n', font: getFont(run), bold: run.bold, italic: run.italic, underline: run.underline });
-            } else {
-                const words = part.split(/( +)/); // split by spaces, keeping them
-                for (const w of words) {
-                    if (w.length > 0) {
-                        allWords.push({ text: w, font: getFont(run), bold: run.bold, italic: run.italic, underline: run.underline });
-                    }
-                }
-            }
-        }
-    }
-
-    // Now lay out words with wrapping
-    let lineWords = [];
-    let lineWidth = 0;
-
-    function flushLine() {
-        if (lineWords.length === 0) return;
-        ensureSpace();
-        let drawX = startX;
-        for (const word of lineWords) {
-            const w = word.font.widthOfTextAtSize(word.text, fontSize);
-            page.drawText(word.text, {
-                x: drawX,
-                y: cursorY,
-                size: fontSize,
-                font: word.font,
-                color: rgb(0, 0, 0),
-            });
-            // Draw underline if needed
-            if (word.underline) {
-                page.drawLine({
-                    start: { x: drawX, y: cursorY - 1 },
-                    end: { x: drawX + w, y: cursorY - 1 },
-                    thickness: 0.5,
-                    color: rgb(0, 0, 0),
-                });
-            }
-            drawX += w;
-        }
-        cursorY -= lineHeight;
-        lineWords = [];
-        lineWidth = 0;
-    }
-
-    for (const word of allWords) {
-        if (word.text === '\n') {
-            flushLine();
-            continue;
-        }
-        const wordWidth = word.font.widthOfTextAtSize(word.text, fontSize);
-        if (lineWidth + wordWidth > maxWidth && lineWords.length > 0) {
-            flushLine();
-            ensureSpace();
-        }
-        lineWords.push(word);
-        lineWidth += wordWidth;
-    }
-    flushLine(); // flush remaining
-
-    return { lastPageIndex: currentPageIndex, lastY: cursorY };
-}
-
-// =====================================================================
-// Multer config for /generate endpoint (image attachments)
-// =====================================================================
-const generateUpload = multer({
-    storage: multer.memoryStorage(), // keep in memory for embedding into PDF
-    limits: { fileSize: 10 * 1024 * 1024 }, // 10MB per file
-    fileFilter: (req, file, cb) => {
-        if (file.mimetype.startsWith('image/')) cb(null, true);
-        else cb(new Error('Only image files are allowed as attachments'), false);
-    }
-});
-
-// POST /api/documents/generate (Generate document from template)
 router.post('/generate', requireAuth, generateUpload.array('attachments', 10), async (req, res) => {
     try {
         // Body fields come as strings from FormData — parse them
@@ -453,67 +298,32 @@ router.post('/generate', requireAuth, generateUpload.array('attachments', 10), a
         if (!template) {
             return res.status(404).json({ error: "Template not found" });
         }
-        if (!fs.existsSync(template.filePath)) {
-            return res.status(404).json({ error: "Physical template file is missing on the server" });
+        if (!template.htmlContent) {
+            return res.status(400).json({ error: "Template has no HTML content configured. Please update the template in Admin panel." });
         }
 
         const combinedTitle = `${template.name} - ${documentTitle || 'Untitled'}`;
 
-        // ===== LOAD PDF & EMBED FONTS =====
-        const pdfBytes = fs.readFileSync(template.filePath);
-        const pdfDoc = await PDFDocument.load(pdfBytes);
-        
-        // Embed all 4 Helvetica variants for rich text support
-        const fonts = {
-            regular: await pdfDoc.embedFont(StandardFonts.Helvetica),
-            bold: await pdfDoc.embedFont(StandardFonts.HelveticaBold),
-            italic: await pdfDoc.embedFont(StandardFonts.HelveticaOblique),
-            boldItalic: await pdfDoc.embedFont(StandardFonts.HelveticaBoldOblique),
-        };
-        const fontSize = 11;
-        const bottomMargin = 40;
-        
-        // ===== FILL ACROFORM FIELDS NATIVELY =====
-        // Since Visual Mapping coordinates were failing for complex PDF CropBox/Matrices, 
-        // we shifted back to native AcroForm mapping (e.g. via Nitro/Adobe).
-        const form = pdfDoc.getForm();
-        
-        if (formData && typeof formData === 'object') {
-            for (const [key, value] of Object.entries(formData)) {
-                if (!value && value !== 0) continue;
-                
-                try {
-                    // Because PDF dictionary structure can be corrupted, getting fields can crash
-                    let field = null;
-                    try { field = form.getTextField(key); } catch (e) {}
-                    if (!field) {
-                        try { field = form.getField(key); } catch (e) {}
-                    }
-                    if (field && typeof field.setText === 'function') {
-                        field.setText(String(value));
-                    }
-                } catch (e) {
-                    console.warn(`[DocGen] Could not find/fill AcroForm field: ${key}`);
-                }
-            }
-        }
-        
-        // Flatten the form to burn the text permanently into the PDF layer
-        try {
-            form.flatten();
-        } catch (flattenErr) {
-            console.warn(`[DocGen] Flattening failed, locking fields instead:`, flattenErr.message);
-            // Fallback: make fields read-only
-            try {
-                for (const field of form.getFields()) {
-                    try { field.enableReadOnly(); } catch (e) {}
-                }
-            } catch (fallbackErr) {
-                console.warn("[DocGen] Fallback read-only also failed:", fallbackErr.message);
-            }
+        // ===== STEP 1: Generate base PDF via Puppeteer =====
+        console.log(`[DocGen] Rendering HTML template "${template.name}" via Puppeteer...`);
+        const basePdfBuffer = await renderHtmlToPdf(
+            template.htmlContent,
+            formData,
+            { orientation: template.orientation || 'portrait' }
+        );
+        console.log(`[DocGen] Base PDF generated: ${basePdfBuffer.length} bytes`);
+
+        // If isPreview (for CreatorSignatureModal), return buffer directly — no stamp, no save
+        if (isPreview) {
+            res.setHeader('Content-Length', basePdfBuffer.length);
+            res.setHeader('Content-Type', 'application/pdf');
+            return res.send(basePdfBuffer);
         }
 
-        // ===== CREATOR SIGNATURE REQUIREMENT =====
+        // ===== STEP 2: Load into pdf-lib for stamping & attachments =====
+        const pdfDoc = await PDFDocument.load(basePdfBuffer);
+
+        // ===== STEP 3: CREATOR SIGNATURE STAMPING =====
         let parsedCoords = null;
         if (signatureCoordsStr) {
             try {
@@ -548,20 +358,14 @@ router.post('/generate', requireAuth, generateUpload.array('attachments', 10), a
                     const drawHeight = drawWidth / aspect;
 
                     // Note: Coordinates from React-PDF are from top-left, pdf-lib is from bottom-left
-                    // We must convert Y correctly!
-                    const { height } = targetPage.getSize();
-                    // domYToPdfY handles React-PDF relative -> PDF-lib absolute Y translation
-                    // If parsedCoords.y is already raw PDF coordinate (from SignatureOverlay math), we might just use it.
-                    // Wait, we can reuse logic from ApprovalSignatureModal / approval.service.js!
-                    // In approval.service.js: 
-                    // pdfY = pageHeight - y - boxHeight
-                    
+                    // parsedCoords.y is already converted by CreatorSignatureModal frontend
                     targetPage.drawImage(embeddedSig, {
                         x: parsedCoords.x,
                         y: parsedCoords.y,
                         width: drawWidth,
                         height: drawHeight,
                     });
+                    console.log(`[DocGen] ✅ Creator signature stamped at page ${parsedCoords.pageIndex}, (${parsedCoords.x}, ${parsedCoords.y})`);
                 } catch (sigErr) {
                     console.warn("[DocGen] Failed to embed creator signature:", sigErr.message);
                 }
@@ -570,7 +374,7 @@ router.post('/generate', requireAuth, generateUpload.array('attachments', 10), a
             }
         }
 
-        // ===== IMAGE ATTACHMENTS — Embed as grid pages =====
+        // ===== STEP 4: IMAGE ATTACHMENTS — Embed as grid pages =====
         const attachments = req.files || [];
         if (attachments.length > 0) {
             console.log(`[DocGen] Embedding ${attachments.length} image attachment(s)...`);
@@ -584,11 +388,15 @@ router.post('/generate', requireAuth, generateUpload.array('attachments', 10), a
             const imgWidth = (pgW - margin * 2 - colGap * (cols - 1)) / cols;
             const maxImgHeight = 250;
             
+            // Embed fonts for the "Lampiran" header
+            const { StandardFonts, rgb } = await import('pdf-lib');
+            const boldFont = await pdfDoc.embedFont(StandardFonts.HelveticaBold);
+            
             let attachPage = pdfDoc.addPage([pgW, pgH]);
             // Draw "Lampiran" header
             attachPage.drawText('Lampiran', {
                 x: margin, y: pgH - margin - 20,
-                size: 16, font: fonts.bold, color: rgb(0, 0, 0),
+                size: 16, font: boldFont, color: rgb(0, 0, 0),
             });
             
             let curX = margin;
@@ -640,20 +448,8 @@ router.post('/generate', requireAuth, generateUpload.array('attachments', 10), a
             }
         }
 
-        // ===== SAVE GENERATED PDF =====
-        let flatPdfBytes;
-        try {
-            flatPdfBytes = await pdfDoc.save();
-        } catch (saveErr) {
-            console.warn("[DocGen] Regular PDF save failed. Falling back to save without appearance updates:", saveErr.message);
-            flatPdfBytes = await pdfDoc.save({ updateFieldAppearances: false });
-        }
-
-        if (isPreview) {
-            res.setHeader('Content-Length', flatPdfBytes.length);
-            res.setHeader('Content-Type', 'application/pdf');
-            return res.send(Buffer.from(flatPdfBytes));
-        }
+        // ===== STEP 5: SAVE GENERATED PDF =====
+        const flatPdfBytes = await pdfDoc.save();
 
         const pendingPath = path.join(process.env.DOCUMENT_STORAGE_PATH || './storage/documents', 'pending');
         if (!fs.existsSync(pendingPath)) {
@@ -668,7 +464,7 @@ router.post('/generate', requireAuth, generateUpload.array('attachments', 10), a
         fs.writeFileSync(generatedPath, flatPdfBytes);
         console.log(`[DocGen] ✅ Generated PDF saved: ${generatedPath} (${flatPdfBytes.length} bytes)`);
 
-        // ===== CREATE DOCUMENT RECORD (file_path → generated file, NOT template) =====
+        // ===== STEP 6: CREATE DOCUMENT RECORD =====
         const data = {
             title: combinedTitle,
             category,
@@ -676,7 +472,7 @@ router.post('/generate', requireAuth, generateUpload.array('attachments', 10), a
             branch,
             department: department || null,
             notes: notes || null,
-            filePath: generatedPath,   // ← CRITICAL: points to GENERATED file, not template
+            filePath: generatedPath,   // ← points to GENERATED file, not template
             originalName: filename,
             uploadedBy: req.user.id,
             dynamicDepartments

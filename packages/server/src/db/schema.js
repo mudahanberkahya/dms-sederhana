@@ -180,7 +180,9 @@ export const activityLog = pgTable("activity_log", {
 export const documentTemplate = pgTable("document_template", {
     id: uuid("id").defaultRandom().primaryKey(),
     name: varchar("name", { length: 255 }).notNull(),
-    filePath: text("file_path").notNull(),
+    filePath: text("file_path"), // Nullable — legacy PDF templates (no longer used for new templates)
+    htmlContent: text("html_content"), // HTML template content with Handlebars placeholders
+    orientation: varchar("orientation", { length: 20 }).default('portrait'), // 'portrait' or 'landscape'
     fieldsConfig: json("fields_config"), // JSON array of fields e.g [{name: "to", label: "To", type: "text"}]
     isActive: boolean("is_active").default(true).notNull(),
     requireCreatorSignature: boolean("require_creator_signature").default(false).notNull(),

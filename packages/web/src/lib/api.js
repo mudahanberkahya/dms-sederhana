@@ -100,7 +100,13 @@ export const api = {
             body: JSON.stringify(payload)
         }),
         generateWithFiles: (formData) => fetchFormData('/documents/generate', formData),
-        previewGenerateWithFiles: (formData) => fetchBlob('/documents/generate', { method: 'POST', body: formData })
+        previewGenerateWithFiles: (formData) => fetchBlob('/documents/generate', { method: 'POST', body: formData }),
+        // New: JSON-based draft preview for the CreatorSignatureModal
+        draftPreview: (payload) => fetchBlob('/documents/draft-preview', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+        }),
     },
 
     approvals: {
@@ -215,14 +221,10 @@ export const api = {
         templates: {
             list: () => fetchApi('/admin/templates'),
             active: () => fetchApi('/admin/templates/active'),
-            upload: (formData) => fetch(`${API_BASE_URL}/admin/templates`, {
+            // New: JSON-based create (no more FormData upload)
+            create: (payload) => fetchApi('/admin/templates', {
                 method: 'POST',
-                body: formData,
-                credentials: 'include'
-            }).then(async res => {
-                const data = await res.json();
-                if (!res.ok) throw new Error(data.error || res.statusText);
-                return data;
+                body: JSON.stringify(payload)
             }),
             update: (id, payload) => fetchApi(`/admin/templates/${id}`, {
                 method: 'PUT',
