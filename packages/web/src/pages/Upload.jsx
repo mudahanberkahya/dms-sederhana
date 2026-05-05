@@ -450,7 +450,7 @@ export default function Upload() {
                                             <input
                                                 type="file"
                                                 className="form-input"
-                                                accept="image/png,image/jpeg,image/jpg"
+                                                accept="image/png,image/jpeg,image/jpg,application/pdf,.pdf"
                                                 multiple
                                                 onChange={e => setAttachmentFiles(Array.from(e.target.files))}
                                             />

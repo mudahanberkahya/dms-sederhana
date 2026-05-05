@@ -39,8 +39,8 @@ const generateUpload = multer({
     storage: multer.memoryStorage(), // keep in memory for embedding into PDF
     limits: { fileSize: 10 * 1024 * 1024 }, // 10MB per file
     fileFilter: (req, file, cb) => {
-        if (file.mimetype.startsWith('image/')) cb(null, true);
-        else cb(new Error('Only image files are allowed as attachments'), false);
+        if (file.mimetype.startsWith('image/') || file.mimetype === 'application/pdf') cb(null, true);
+        else cb(new Error('Only image and PDF files are allowed as attachments'), false);
     }
 });
 
@@ -352,16 +352,29 @@ router.post('/generate', requireAuth, generateUpload.array('attachments', 10), a
                     }
 
                     const targetPage = pdfDoc.getPage(parsedCoords.pageIndex);
-                    // Standard visual signature width = 120px
-                    const drawWidth = 120;
+                    // We want to fit the image INSIDE the parsedCoords bounding box while keeping aspect ratio.
                     const aspect = embeddedSig.width / embeddedSig.height;
-                    const drawHeight = drawWidth / aspect;
-
-                    // Note: Coordinates from React-PDF are from top-left, pdf-lib is from bottom-left
-                    // parsedCoords.y is already converted by CreatorSignatureModal frontend
+                    let drawWidth = parsedCoords.width || 140;
+                    let drawHeight = drawWidth / aspect;
+                    
+                    const targetHeight = parsedCoords.height || 60;
+                    if (drawHeight > targetHeight) {
+                        drawHeight = targetHeight;
+                        drawWidth = drawHeight * aspect;
+                    }
+                    
+                    // Center the image within the drag box
+                    const offsetX = ((parsedCoords.width || 140) - drawWidth) / 2;
+                    const offsetY = (targetHeight - drawHeight) / 2;
+                    
+                    // Note: parsedCoords.y is already converted by CreatorSignatureModal frontend to be the BOTTOM-LEFT 
+                    // of the drag box (pdf-lib format). We add offsetY to push it up slightly to be perfectly centered.
+                    const finalX = parsedCoords.x + offsetX;
+                    const finalY = parsedCoords.y + offsetY;
+                    
                     targetPage.drawImage(embeddedSig, {
-                        x: parsedCoords.x,
-                        y: parsedCoords.y,
+                        x: finalX,
+                        y: finalY,
                         width: drawWidth,
                         height: drawHeight,
                     });
@@ -374,37 +387,42 @@ router.post('/generate', requireAuth, generateUpload.array('attachments', 10), a
             }
         }
 
-        // ===== STEP 4: IMAGE ATTACHMENTS — Embed as grid pages =====
+        // ===== STEP 4: ATTACHMENTS (Images & PDFs) =====
         const attachments = req.files || [];
         if (attachments.length > 0) {
-            console.log(`[DocGen] Embedding ${attachments.length} image attachment(s)...`);
-            
-            const firstPage = pdfDoc.getPage(0);
-            const { width: pgW, height: pgH } = firstPage.getSize();
-            const margin = 40;
-            const colGap = 20;
-            const rowGap = 20;
-            const cols = 2;
-            const imgWidth = (pgW - margin * 2 - colGap * (cols - 1)) / cols;
-            const maxImgHeight = 250;
-            
-            // Embed fonts for the "Lampiran" header
-            const { StandardFonts, rgb } = await import('pdf-lib');
-            const boldFont = await pdfDoc.embedFont(StandardFonts.HelveticaBold);
-            
-            let attachPage = pdfDoc.addPage([pgW, pgH]);
-            // Draw "Lampiran" header
-            attachPage.drawText('Lampiran', {
-                x: margin, y: pgH - margin - 20,
-                size: 16, font: boldFont, color: rgb(0, 0, 0),
-            });
-            
-            let curX = margin;
-            let curY = pgH - margin - 50;
-            let colIdx = 0;
+            const imageAttachments = attachments.filter(a => a.mimetype.startsWith('image/'));
+            const pdfAttachments = attachments.filter(a => a.mimetype === 'application/pdf');
 
-            for (const att of attachments) {
-                try {
+            // 4a. Process IMAGE attachments (draw in grid)
+            if (imageAttachments.length > 0) {
+                console.log(`[DocGen] Embedding ${imageAttachments.length} image attachment(s)...`);
+                
+                const firstPage = pdfDoc.getPage(0);
+                const { width: pgW, height: pgH } = firstPage.getSize();
+                const margin = 40;
+                const colGap = 20;
+                const rowGap = 20;
+                const cols = 2;
+                const imgWidth = (pgW - margin * 2 - colGap * (cols - 1)) / cols;
+                const maxImgHeight = 250;
+                
+                // Embed fonts for the "Lampiran" header
+                const { StandardFonts, rgb } = await import('pdf-lib');
+                const boldFont = await pdfDoc.embedFont(StandardFonts.HelveticaBold);
+                
+                let attachPage = pdfDoc.addPage([pgW, pgH]);
+                // Draw "Lampiran" header
+                attachPage.drawText('Lampiran (Gambar)', {
+                    x: margin, y: pgH - margin - 20,
+                    size: 16, font: boldFont, color: rgb(0, 0, 0),
+                });
+                
+                let curX = margin;
+                let curY = pgH - margin - 50;
+                let colIdx = 0;
+
+                for (const att of imageAttachments) {
+                    try {
                     let embeddedImg;
                     if (att.mimetype === 'image/png') {
                         embeddedImg = await pdfDoc.embedPng(att.buffer);
@@ -443,10 +461,28 @@ router.post('/generate', requireAuth, generateUpload.array('attachments', 10), a
                         curX += imgWidth + colGap;
                     }
                 } catch (imgErr) {
-                    console.warn(`[DocGen] Failed to embed attachment ${att.originalname}:`, imgErr.message);
+                    console.warn(`[DocGen] Failed to embed image attachment ${att.originalname}:`, imgErr.message);
                 }
             }
-        }
+        } // <-- THIS WAS MISSING!
+
+        // 4b. Process PDF attachments (merge pages)
+        if (pdfAttachments.length > 0) {
+            console.log(`[DocGen] Merging ${pdfAttachments.length} PDF attachment(s)...`);
+                for (const att of pdfAttachments) {
+                    try {
+                        const attachDoc = await PDFDocument.load(att.buffer, { ignoreEncryption: true });
+                        const copiedPages = await pdfDoc.copyPages(attachDoc, attachDoc.getPageIndices());
+                        for (const page of copiedPages) {
+                            pdfDoc.addPage(page);
+                        }
+                        console.log(`[DocGen] Appended ${copiedPages.length} pages from PDF attachment: ${att.originalname}`);
+                    } catch (pdfErr) {
+                        console.warn(`[DocGen] Failed to merge PDF attachment ${att.originalname}:`, pdfErr.message);
+                    }
+                }
+            }
+        } // Close if (attachments.length > 0)
 
         // ===== STEP 5: SAVE GENERATED PDF =====
         const flatPdfBytes = await pdfDoc.save();

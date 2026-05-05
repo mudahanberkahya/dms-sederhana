@@ -13,8 +13,8 @@ def find_keyword(input_pdf_path, keyword, position_hint='Above', offset_x=0, off
         doc = fitz.open(input_pdf_path)
         found = False
         
-        sig_width = 100
-        sig_height = 50
+        sig_width = 140
+        sig_height = 60
         gap_above = 8
         
         for page_num in range(len(doc)):
@@ -48,12 +48,40 @@ def find_keyword(input_pdf_path, keyword, position_hint='Above', offset_x=0, off
                 
                 final_x0 = sig_x0 + offset_x
                 final_y0 = sig_y0 - offset_y
+                final_x1 = final_x0 + sig_width
+                final_y1 = final_y0 + sig_height
+                
+                # Create a rect to simulate stamp bounds
+                stamp_rect = fitz.Rect(final_x0, final_y0, final_x1, final_y1)
+                
+                # Bounds checking — ensure we don't go off the page
+                page_rect = page.rect
+                
+                # If signature goes above the page top, push it down
+                if stamp_rect.y0 < page_rect.y0:
+                    shift = page_rect.y0 - stamp_rect.y0 + 5
+                    stamp_rect = fitz.Rect(stamp_rect.x0, stamp_rect.y0 + shift, 
+                                        stamp_rect.x1, stamp_rect.y1 + shift)
+                
+                # If signature goes below the page bottom, push it up
+                if stamp_rect.y1 > page_rect.y1:
+                    shift = stamp_rect.y1 - page_rect.y1 + 5
+                    stamp_rect = fitz.Rect(stamp_rect.x0, stamp_rect.y0 - shift, 
+                                        stamp_rect.x1, stamp_rect.y1 - shift)
+                
+                # If signature goes off the left/right edges, clamp it
+                if stamp_rect.x0 < page_rect.x0:
+                    stamp_rect = fitz.Rect(page_rect.x0 + 5, stamp_rect.y0,
+                                        page_rect.x0 + 5 + sig_width, stamp_rect.y1)
+                if stamp_rect.x1 > page_rect.x1:
+                    stamp_rect = fitz.Rect(page_rect.x1 - sig_width - 5, stamp_rect.y0,
+                                        page_rect.x1 - 5, stamp_rect.y1)
                 
                 print(json.dumps({
                     "found": True,
                     "page": page_num + 1,
-                    "x": final_x0,
-                    "y": final_y0,
+                    "x": stamp_rect.x0,
+                    "y": stamp_rect.y0,
                     "width": sig_width,
                     "height": sig_height
                 }))

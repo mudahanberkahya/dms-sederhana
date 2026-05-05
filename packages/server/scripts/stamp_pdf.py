@@ -39,9 +39,9 @@ def stamp_pdf(input_pdf_path, output_pdf_path, signature_image_path, keyword, po
             found = True
         else:
             # Keyword Search Mode (Default)
-            # Standard signature size (slightly smaller for cleaner fit)
-            sig_width = 100
-            sig_height = 50
+            # Standard signature size (matching the frontend ApprovalSignatureModal)
+            sig_width = 140
+            sig_height = 60
             # Gap between signature bottom edge and keyword top edge
             gap_above = 8  # small gap so stamp sits just above the signature line
             
