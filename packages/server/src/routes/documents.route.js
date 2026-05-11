@@ -14,10 +14,9 @@ import { renderHtmlToPdf } from '../services/puppeteer.service.js';
 
 const router = express.Router();
 
-// Setup Multer for manual PDF file uploads (POST /api/documents — manual upload)
+// Setup Multer for manual PDF file uploads
 const storage = multer.diskStorage({
     destination: function (req, file, cb) {
-        // Upload to a temporary pending folder
         const pendingPath = path.join(process.env.DOCUMENT_STORAGE_PATH || './storage/documents', 'pending');
         if (!fs.existsSync(pendingPath)) {
             fs.mkdirSync(pendingPath, { recursive: true });
@@ -27,17 +26,16 @@ const storage = multer.diskStorage({
     filename: function (req, file, cb) {
         const timestamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19);
         const originalName = path.basename(file.originalname, path.extname(file.originalname))
-            .replace(/[^a-zA-Z0-9_-]/g, '_')  // sanitize special chars
-            .substring(0, 60);  // limit length
+            .replace(/[^a-zA-Z0-9_-]/g, '_')
+            .substring(0, 60);
         cb(null, `${originalName}_${timestamp}${path.extname(file.originalname)}`);
     }
 });
 const upload = multer({ storage: storage });
 
-// Multer config for /generate endpoint (image attachments only)
 const generateUpload = multer({
-    storage: multer.memoryStorage(), // keep in memory for embedding into PDF
-    limits: { fileSize: 10 * 1024 * 1024 }, // 10MB per file
+    storage: multer.memoryStorage(),
+    limits: { fileSize: 10 * 1024 * 1024 },
     fileFilter: (req, file, cb) => {
         if (file.mimetype.startsWith('image/') || file.mimetype === 'application/pdf') cb(null, true);
         else cb(new Error('Only image and PDF files are allowed as attachments'), false);
@@ -46,15 +44,21 @@ const generateUpload = multer({
 
 // Prefix: /api/documents
 
-// GET /api/documents (List all documents, requires auth)
+// GET /api/documents (List with pagination and filters)
 router.get('/', requireAuth, async (req, res) => {
     try {
         const filters = {};
         if (req.query.startDate) filters.startDate = req.query.startDate;
         if (req.query.endDate) filters.endDate = req.query.endDate;
+        if (req.query.subCategory) filters.subCategory = req.query.subCategory;
+        if (req.query.branch) filters.branch = req.query.branch;
+        if (req.query.status) filters.status = req.query.status;
+        if (req.query.search) filters.search = req.query.search;
+        if (req.query.page) filters.page = parseInt(req.query.page);
+        if (req.query.limit) filters.limit = parseInt(req.query.limit);
         
-        const docs = await DocumentService.listDocuments(filters);
-        res.json(docs);
+        const result = await DocumentService.listDocuments(filters);
+        res.json(result);
     } catch (err) {
         console.error("List Documents Error:", err);
         res.status(500).json({ error: "Failed to fetch documents" });
@@ -84,10 +88,12 @@ router.get('/:id', requireAuth, async (req, res) => {
         if (!doc) {
             return res.status(404).json({ error: "Document not found" });
         }
-        // Add authorization to approve flag based on pending list logic
-        const { ApprovalService } = await import('../services/approval.service.js');
-        const pendingApprovals = await ApprovalService.getPendingApprovals(req.user.id, req.user.role || '');
-        doc.canIApprove = pendingApprovals.some(p => p.documentId === doc.id);
+        // Efficient check: can this user approve this specific document?
+        doc.canIApprove = await DocumentService.canUserApproveDocument(
+            doc.id, 
+            req.user.id, 
+            req.user.role || ''
+        );
 
         res.json(doc);
     } catch (err) {
@@ -96,7 +102,7 @@ router.get('/:id', requireAuth, async (req, res) => {
     }
 });
 
-// GET /api/documents/:id/file (Stream document PDF from NAS/Server)
+// GET /api/documents/:id/file (Stream document PDF)
 router.get('/:id/file', requireAuth, async (req, res) => {
     try {
         const doc = await DocumentService.getDocumentById(req.params.id);
@@ -110,12 +116,9 @@ router.get('/:id/file', requireAuth, async (req, res) => {
         }
 
         let absolutePath = filePath;
-        // If the path isn't absolute, it's an old relative storage path from DB
         if (!path.isAbsolute(filePath)) {
-            // Check original CWD first
             absolutePath = path.resolve(process.cwd(), filePath);
             if (!fs.existsSync(absolutePath) && process.env.DOCUMENT_STORAGE_PATH) {
-                // If they migrated to NAS but DB path is still relative: map filename to NAS folder
                 absolutePath = path.join(process.env.DOCUMENT_STORAGE_PATH, path.basename(filePath));
             }
         }
@@ -132,7 +135,6 @@ router.get('/:id/file', requireAuth, async (req, res) => {
             res.setHeader('Content-Disposition', `attachment; filename="${safeTitle}.pdf"`);
         } else {
             res.setHeader('Content-Disposition', 'inline');
-            // Prevent caching to ensure stamped PDFs are loaded
             res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
             res.setHeader('Expires', '0');
             res.setHeader('Surrogate-Control', 'no-store');
@@ -146,10 +148,7 @@ router.get('/:id/file', requireAuth, async (req, res) => {
     }
 });
 
-// =====================================================================
 // POST /api/documents/draft-preview (Generate a preview PDF from template)
-// Returns PDF buffer directly for the CreatorSignatureModal
-// =====================================================================
 router.post('/draft-preview', requireAuth, async (req, res) => {
     try {
         const { templateId, formData } = req.body;
@@ -185,7 +184,6 @@ router.post('/', requireAuth, upload.single('documentFile'), async (req, res) =>
     try {
         const { title, category, branch, department, notes, subCategory } = req.body;
         
-        // Parse dynamicDepartments if provided (multipart/form-data could send it as a JSON string)
         let dynamicDepartments = [];
         try {
             if (req.body.dynamicDepartments) {
@@ -204,7 +202,6 @@ router.post('/', requireAuth, upload.single('documentFile'), async (req, res) =>
             return res.status(400).json({ error: "Invalid input data: Category and Branch are REQUIRED" });
         }
 
-        // Branch access validation: ensure user is allowed to upload to this branch
         const userRole = req.user.role?.toLowerCase() || '';
         if (userRole !== 'admin' && userRole !== 'super_admin') {
             const [profile] = await db.select().from(userProfile).where(eq(userProfile.userId, req.user.id)).limit(1);
@@ -229,263 +226,109 @@ router.post('/', requireAuth, upload.single('documentFile'), async (req, res) =>
         };
 
         const newDoc = await DocumentService.createDocument(data);
-
         res.status(201).json(newDoc);
     } catch (err) {
         console.error("Create Document Error:", err);
-        // Explicitly remove the uploaded file to prevent pending garbage file accumulation
         if (req.file && req.file.path && fs.existsSync(req.file.path)) {
-            try {
-                fs.unlinkSync(req.file.path);
-            } catch (unlinkErr) {
-                console.error("Failed to delete pending file:", unlinkErr);
-            }
+            fs.unlinkSync(req.file.path);
         }
         res.status(500).json({ error: err.message || "Failed to create document" });
     }
 });
-
 // =====================================================================
-// POST /api/documents/generate (Generate document from HTML template)
-// Pipeline: Handlebars compile → Puppeteer render → pdf-lib stamp/attach
+// POST /api/documents/generate (Generate document from template + form data)
 // =====================================================================
 router.post('/generate', requireAuth, generateUpload.array('attachments', 10), async (req, res) => {
     try {
-        // Body fields come as strings from FormData — parse them
-        const templateId = req.body.templateId;
-        const documentTitle = req.body.documentTitle || '';
-        const category = req.body.category;
-        const branch = req.body.branch;
-        const department = req.body.department || null;
-        const notes = req.body.notes || null;
-        const subCategory = req.body.subCategory || null;
-        const signatureCoordsStr = req.body.signatureCoords || null;
-        const isPreview = req.body.isPreview === 'true';
-        
-        let formData = {};
-        try {
-            if (req.body.formData) {
-                formData = typeof req.body.formData === 'string' ? JSON.parse(req.body.formData) : req.body.formData;
-            }
-        } catch (e) {
-            console.warn("[DocGen] Failed to parse formData:", e.message);
-        }
+        const { templateId, formData, category, branch, department, subCategory, notes, title } = req.body;
 
-        let dynamicDepartments = [];
-        try {
-            if (req.body.dynamicDepartments) {
-                dynamicDepartments = typeof req.body.dynamicDepartments === 'string' ? JSON.parse(req.body.dynamicDepartments) : req.body.dynamicDepartments;
-            }
-        } catch (err) {
-            console.warn("Failed to parse dynamicDepartments", err);
-        }
-
-        if (!templateId || !category || !branch) {
-            return res.status(400).json({ error: "Missing required fields: templateId, category, branch" });
-        }
-
-        // Branch access validation
-        const userRole = req.user.role?.toLowerCase() || '';
-        if (userRole !== 'admin' && userRole !== 'super_admin') {
-            const [profile] = await db.select().from(userProfile).where(eq(userProfile.userId, req.user.id)).limit(1);
-            const allowedBranches = profile?.branches || [];
-            if (!allowedBranches.includes(branch)) {
-                return res.status(403).json({ error: `Forbidden: You are not authorized to upload documents for branch "${branch}".` });
-            }
-        }
+        if (!templateId) throw new Error("Missing required field: templateId");
+        if (!category || !branch) throw new Error("Category and Branch are required");
 
         const [template] = await db.select().from(documentTemplate).where(eq(documentTemplate.id, templateId));
-        if (!template) {
-            return res.status(404).json({ error: "Template not found" });
-        }
-        if (!template.htmlContent) {
-            return res.status(400).json({ error: "Template has no HTML content configured. Please update the template in Admin panel." });
-        }
+        if (!template) throw new Error("Template not found");
+        if (!template.htmlContent) throw new Error("Template has no HTML content configured.");
 
-        const combinedTitle = `${template.name} - ${documentTitle || 'Untitled'}`;
+        // Parse formData from JSON string if needed
+        const parsedFormData = typeof formData === 'string' ? JSON.parse(formData) : (formData || {});
 
-        // ===== STEP 1: Generate base PDF via Puppeteer =====
-        console.log(`[DocGen] Rendering HTML template "${template.name}" via Puppeteer...`);
-        const basePdfBuffer = await renderHtmlToPdf(
+        // Generate combined title
+        const combinedTitle = title || parsedFormData.documentTitle || template.name || "Generated Document";
+
+        // ===== STEP 1: RENDER HTML TO PDF =====
+        const pdfBuffer = await renderHtmlToPdf(
             template.htmlContent,
-            formData,
+            parsedFormData,
             { orientation: template.orientation || 'portrait' }
         );
-        console.log(`[DocGen] Base PDF generated: ${basePdfBuffer.length} bytes`);
 
-        // If isPreview (for CreatorSignatureModal), return buffer directly — no stamp, no save
-        if (isPreview) {
-            res.setHeader('Content-Length', basePdfBuffer.length);
-            res.setHeader('Content-Type', 'application/pdf');
-            return res.send(basePdfBuffer);
+        // ===== STEP 2: MERGE ATTACHMENTS (Images + PDFs) =====
+        let attachments = [];
+        if (req.files && req.files.length > 0) {
+            attachments = req.files;
+        } else if (req.body.attachmentsJson) {
+            attachments = JSON.parse(req.body.attachmentsJson);
         }
 
-        // ===== STEP 2: Load into pdf-lib for stamping & attachments =====
-        const pdfDoc = await PDFDocument.load(basePdfBuffer);
+        let pdfDoc;
+        let startPageIndex = 0;
 
-        // ===== STEP 3: CREATOR SIGNATURE STAMPING =====
-        let parsedCoords = null;
-        if (signatureCoordsStr) {
-            try {
-                parsedCoords = JSON.parse(signatureCoordsStr);
-            } catch (e) {
-                console.warn("[DocGen] Failed to parse signatureCoords:", e.message);
-            }
-        }
-
-        if (parsedCoords && parsedCoords.pageIndex !== undefined && parsedCoords.x !== undefined && parsedCoords.y !== undefined) {
-            // Retrieve Creator's Signature
-            const [sigRecord] = await db.select().from(signature).where(eq(signature.userId, req.user.id)).limit(1);
-            if (!sigRecord) {
-                return res.status(400).json({ error: "Your account does not have a signature configured. Please contact the administrator." });
-            }
-
-            const signaturePath = sigRecord.imagePath;
-            if (fs.existsSync(signaturePath)) {
-                try {
-                    const signatureBytes = fs.readFileSync(signaturePath);
-                    let embeddedSig;
-                    if (signaturePath.toLowerCase().endsWith('.png')) {
-                        embeddedSig = await pdfDoc.embedPng(signatureBytes);
-                    } else {
-                        embeddedSig = await pdfDoc.embedJpg(signatureBytes);
-                    }
-
-                    const targetPage = pdfDoc.getPage(parsedCoords.pageIndex);
-                    // We want to fit the image INSIDE the parsedCoords bounding box while keeping aspect ratio.
-                    const aspect = embeddedSig.width / embeddedSig.height;
-                    let drawWidth = parsedCoords.width || 140;
-                    let drawHeight = drawWidth / aspect;
-                    
-                    const targetHeight = parsedCoords.height || 60;
-                    if (drawHeight > targetHeight) {
-                        drawHeight = targetHeight;
-                        drawWidth = drawHeight * aspect;
-                    }
-                    
-                    // Center the image within the drag box
-                    const offsetX = ((parsedCoords.width || 140) - drawWidth) / 2;
-                    const offsetY = (targetHeight - drawHeight) / 2;
-                    
-                    // Note: parsedCoords.y is already converted by CreatorSignatureModal frontend to be the BOTTOM-LEFT 
-                    // of the drag box (pdf-lib format). We add offsetY to push it up slightly to be perfectly centered.
-                    const finalX = parsedCoords.x + offsetX;
-                    const finalY = parsedCoords.y + offsetY;
-                    
-                    targetPage.drawImage(embeddedSig, {
-                        x: finalX,
-                        y: finalY,
-                        width: drawWidth,
-                        height: drawHeight,
-                    });
-                    console.log(`[DocGen] ✅ Creator signature stamped at page ${parsedCoords.pageIndex}, (${parsedCoords.x}, ${parsedCoords.y})`);
-                } catch (sigErr) {
-                    console.warn("[DocGen] Failed to embed creator signature:", sigErr.message);
-                }
-            } else {
-                console.warn("[DocGen] Creator signature image file missing:", signaturePath);
-            }
-        }
-
-        // ===== STEP 4: ATTACHMENTS (Images & PDFs) =====
-        const attachments = req.files || [];
         if (attachments.length > 0) {
-            const imageAttachments = attachments.filter(a => a.mimetype.startsWith('image/'));
-            const pdfAttachments = attachments.filter(a => a.mimetype === 'application/pdf');
+            pdfDoc = await PDFDocument.load(pdfBuffer);
 
-            // 4a. Process IMAGE attachments (draw in grid)
+            // --- 4a. Process Image Attachments (embed as new pages) ---
+            const imageAttachments = attachments.filter(att => att.mimetype?.startsWith('image/'));
             if (imageAttachments.length > 0) {
-                console.log(`[DocGen] Embedding ${imageAttachments.length} image attachment(s)...`);
-                
-                const firstPage = pdfDoc.getPage(0);
-                const { width: pgW, height: pgH } = firstPage.getSize();
-                const margin = 40;
-                const colGap = 20;
-                const rowGap = 20;
-                const cols = 2;
-                const imgWidth = (pgW - margin * 2 - colGap * (cols - 1)) / cols;
-                const maxImgHeight = 250;
-                
-                // Embed fonts for the "Lampiran" header
-                const { StandardFonts, rgb } = await import('pdf-lib');
-                const boldFont = await pdfDoc.embedFont(StandardFonts.HelveticaBold);
-                
-                let attachPage = pdfDoc.addPage([pgW, pgH]);
-                // Draw "Lampiran" header
-                attachPage.drawText('Lampiran (Gambar)', {
-                    x: margin, y: pgH - margin - 20,
-                    size: 16, font: boldFont, color: rgb(0, 0, 0),
-                });
-                
-                let curX = margin;
-                let curY = pgH - margin - 50;
-                let colIdx = 0;
-
                 for (const att of imageAttachments) {
                     try {
-                    let embeddedImg;
-                    if (att.mimetype === 'image/png') {
-                        embeddedImg = await pdfDoc.embedPng(att.buffer);
-                    } else {
-                        embeddedImg = await pdfDoc.embedJpg(att.buffer);
+                        const imgBytes = att.buffer || fs.readFileSync(att.path || att.filepath);
+                        const ext = att.originalname?.split('.').pop()?.toLowerCase() || 'png';
+                        let img;
+                        if (ext === 'jpg' || ext === 'jpeg') {
+                            img = await pdfDoc.embedJpg(imgBytes);
+                        } else if (ext === 'png') {
+                            img = await pdfDoc.embedPng(imgBytes);
+                        } else {
+                            console.warn(`[DocGen] Unsupported image format: ${ext}, attempting as PNG`);
+                            try { img = await pdfDoc.embedPng(imgBytes); } catch { img = await pdfDoc.embedJpg(imgBytes); }
+                        }
+                        // Use tallest fitting size
+                        const { width: pageWidth, height: pageHeight } = pdfDoc.getPage(0).getSize();
+                        const imgDims = img.scaleToFit(pageWidth * 0.85, pageHeight * 0.85);
+                        const page = pdfDoc.addPage([pageWidth, pageHeight]);
+                        page.drawImage(img, {
+                            x: (pageWidth - imgDims.width) / 2,
+                            y: (pageHeight - imgDims.height) / 2,
+                            width: imgDims.width,
+                            height: imgDims.height,
+                        });
+                    } catch (imgErr) {
+                        console.warn(`[DocGen] Failed to embed image ${att.originalname}:`, imgErr.message);
                     }
-
-                    // Scale image to fit within cell
-                    const aspect = embeddedImg.width / embeddedImg.height;
-                    let drawW = imgWidth;
-                    let drawH = drawW / aspect;
-                    if (drawH > maxImgHeight) {
-                        drawH = maxImgHeight;
-                        drawW = drawH * aspect;
-                    }
-
-                    // Check if we need a new page
-                    if (curY - drawH < margin) {
-                        attachPage = pdfDoc.addPage([pgW, pgH]);
-                        curX = margin;
-                        curY = pgH - margin - 20;
-                        colIdx = 0;
-                    }
-
-                    attachPage.drawImage(embeddedImg, {
-                        x: curX, y: curY - drawH,
-                        width: drawW, height: drawH,
-                    });
-
-                    colIdx++;
-                    if (colIdx >= cols) {
-                        colIdx = 0;
-                        curX = margin;
-                        curY -= (drawH + rowGap);
-                    } else {
-                        curX += imgWidth + colGap;
-                    }
-                } catch (imgErr) {
-                    console.warn(`[DocGen] Failed to embed image attachment ${att.originalname}:`, imgErr.message);
                 }
             }
-        } // <-- THIS WAS MISSING!
 
-        // 4b. Process PDF attachments (merge pages)
-        if (pdfAttachments.length > 0) {
-            console.log(`[DocGen] Merging ${pdfAttachments.length} PDF attachment(s)...`);
+            // --- 4b. Process PDF Attachments (merge pages) ---
+            const pdfAttachments = attachments.filter(att => att.mimetype === 'application/pdf');
+            if (pdfAttachments.length > 0) {
                 for (const att of pdfAttachments) {
                     try {
-                        const attachDoc = await PDFDocument.load(att.buffer, { ignoreEncryption: true });
-                        const copiedPages = await pdfDoc.copyPages(attachDoc, attachDoc.getPageIndices());
+                        const pdfBytes = att.buffer || fs.readFileSync(att.path || att.filepath);
+                        const attDoc = await PDFDocument.load(pdfBytes);
+                        const copiedPages = await pdfDoc.copyPages(attDoc, attDoc.getPageIndices());
                         for (const page of copiedPages) {
                             pdfDoc.addPage(page);
                         }
-                        console.log(`[DocGen] Appended ${copiedPages.length} pages from PDF attachment: ${att.originalname}`);
+                        console.log(`[DocGen] Appended ${copiedPages.length} pages from PDF: ${att.originalname}`);
                     } catch (pdfErr) {
-                        console.warn(`[DocGen] Failed to merge PDF attachment ${att.originalname}:`, pdfErr.message);
+                        console.warn(`[DocGen] Failed to merge PDF ${att.originalname}:`, pdfErr.message);
                     }
                 }
             }
-        } // Close if (attachments.length > 0)
+        }
 
-        // ===== STEP 5: SAVE GENERATED PDF =====
-        const flatPdfBytes = await pdfDoc.save();
+        // ===== SAVE GENERATED PDF =====
+        const flatPdfBytes = pdfDoc ? await pdfDoc.save() : pdfBuffer;
 
         const pendingPath = path.join(process.env.DOCUMENT_STORAGE_PATH || './storage/documents', 'pending');
         if (!fs.existsSync(pendingPath)) {
@@ -500,7 +343,7 @@ router.post('/generate', requireAuth, generateUpload.array('attachments', 10), a
         fs.writeFileSync(generatedPath, flatPdfBytes);
         console.log(`[DocGen] ✅ Generated PDF saved: ${generatedPath} (${flatPdfBytes.length} bytes)`);
 
-        // ===== STEP 6: CREATE DOCUMENT RECORD =====
+        // ===== CREATE DOCUMENT RECORD =====
         const data = {
             title: combinedTitle,
             category,
@@ -508,10 +351,10 @@ router.post('/generate', requireAuth, generateUpload.array('attachments', 10), a
             branch,
             department: department || null,
             notes: notes || null,
-            filePath: generatedPath,   // ← points to GENERATED file, not template
+            filePath: generatedPath,
             originalName: filename,
             uploadedBy: req.user.id,
-            dynamicDepartments
+            dynamicDepartments: []
         };
 
         const newDoc = await DocumentService.createDocument(data);

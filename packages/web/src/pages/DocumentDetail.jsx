@@ -14,7 +14,8 @@ import {
     UserCheck,
     Loader2,
     Lock,
-    Trash2
+    Trash2,
+    Sparkles
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import ApprovalSignatureModal from '../components/ApprovalSignatureModal';
@@ -43,8 +44,11 @@ export default function DocumentDetail() {
     const [pdfError, setPdfError] = useState(false);
     const [actionComment, setActionComment] = useState('');
     const [showSignatureModal, setShowSignatureModal] = useState(false);
-    const [blobVersion, setBlobVersion] = useState(0); // cache-bust counter
-    const [signatureHint, setSignatureHint] = useState(null); // keyword offset data
+    const [blobVersion, setBlobVersion] = useState(0);
+    const [signatureHint, setSignatureHint] = useState(null);
+    const [aiReviewData, setAiReviewData] = useState(null);
+    const [aiReviewLoading, setAiReviewLoading] = useState(false);
+    const [showAiReview, setShowAiReview] = useState(false);
     const navigate = useNavigate();
 
     const handleDelete = async () => {
@@ -63,7 +67,7 @@ export default function DocumentDetail() {
         try {
             const data = await api.documents.get(id);
             setDocData(data);
-            setBlobVersion(v => v + 1); // trigger PDF blob re-fetch
+            setBlobVersion(v => v + 1);
 
             if (data.approvalChain && data.approvalChain.length > 0) {
                 const mappedSteps = data.approvalChain.map((aStep) => {
@@ -97,9 +101,33 @@ export default function DocumentDetail() {
         }
     };
 
+    const handleAiReview = async () => {
+        if (!docData) return;
+        setAiReviewLoading(true);
+        setShowAiReview(true);
+        try {
+            const res = await fetch('/api/ai/review', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    title: docData.title || '',
+                    content: docData.notes || 'No description provided.',
+                    category: docData.category || '',
+                    department: docData.department || ''
+                })
+            });
+            if (!res.ok) throw new Error('AI Review failed');
+            const data = await res.json();
+            setAiReviewData(data.review);
+        } catch (err) {
+            setAiReviewData({ error: 'AI Review gagal: ' + err.message });
+        } finally {
+            setAiReviewLoading(false);
+        }
+    };
+
     const handleAction = async (actionType, signatureConfig = null) => {
         if (actionType === 'approve' && !signatureConfig) {
-            // Fetch keyword offset hint before opening modal
             try {
                 const hint = await api.approvals.signatureHint(id);
                 setSignatureHint(hint);
@@ -139,24 +167,18 @@ export default function DocumentDetail() {
         }
     };
 
-    // Callback from signature modal
     const handleSignatureConfirm = ({ signatureConfig }) => {
         handleAction('approve', signatureConfig);
     };
 
-    // Show action buttons if: document is PENDING and user is admin or assigned to the current step
     const canApprove = () => {
         if (!docData || docData.status !== 'PENDING') return false;
         if (!user) return false;
         const currentStep = approvalSteps.find(s => s.status === 'current');
         if (!currentStep) return false;
-        // Admin can always approve
         if (user.role === 'admin' || user.role === 'super_admin') return true;
-        // Backend authorized approval check applies explicitly here (solves delegation issues)
         if (docData.canIApprove) return true;
-        // Assigned user can approve
         if (currentStep.assignedUserId === user.id) return true;
-        // Unassigned step matching user role
         if (!currentStep.assignedUserId && currentStep.roleRequired === user.role) return true;
         return false;
     };
@@ -165,12 +187,10 @@ export default function DocumentDetail() {
         fetchDocDetails();
     }, [id]);
 
-    // Fetch PDF securely with credentials and display as Blob URL
     useEffect(() => {
         if (docData && (docData.signedFilePath || docData.filePath)) {
             setPdfLoading(true);
             setPdfError(false);
-            // Revoke old blob URL to free memory
             if (pdfBlobUrl) {
                 URL.revokeObjectURL(pdfBlobUrl);
                 setPdfBlobUrl(null);
@@ -190,7 +210,6 @@ export default function DocumentDetail() {
         }
     }, [docData, id, blobVersion]);
 
-    // Cleanup Blob URL on unmount
     useEffect(() => {
         return () => {
             if (pdfBlobUrl) {
@@ -237,7 +256,6 @@ export default function DocumentDetail() {
             </div>
 
             <div className="detail-grid">
-                {/* PDF Viewer — prefer signed version if available */}
                 <div className="card pdf-viewer-card">
                     <div className="pdf-viewer-header">
                         <div className="pdf-info">
@@ -300,9 +318,7 @@ export default function DocumentDetail() {
                     </div>
                 </div>
 
-                {/* Approval Panel */}
                 <div className="detail-sidebar">
-                    {/* Document Info */}
                     <div className="card detail-info-card">
                         <h3 className="card-title">Document Info</h3>
                         <div className="info-grid">
@@ -351,7 +367,68 @@ export default function DocumentDetail() {
                         </div>
                     </div>
 
-                    {/* Approval Chain */}
+                    {/* AI Review Card */}
+                    <div className="card" style={{ border: '1px solid rgba(53, 37, 205, 0.2)' }}>
+                        <div style={{ padding: '1rem' }}>
+                            <button
+                                className="btn btn-primary btn-sm"
+                                style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem', background: 'linear-gradient(135deg, #3525cd, #6c5ce7)' }}
+                                onClick={handleAiReview}
+                                disabled={aiReviewLoading}
+                            >
+                                {aiReviewLoading ? (
+                                    <Loader2 size={16} style={{ animation: 'spin 1s linear infinite' }} />
+                                ) : (
+                                    <Sparkles size={16} />
+                                )}
+                                {aiReviewLoading ? 'Menganalisis...' : 'Review with AI'}
+                            </button>
+                        </div>
+                        {showAiReview && aiReviewData && (
+                            <div style={{ padding: '0 1rem 1rem', borderTop: '1px solid var(--border-color)', paddingTop: '0.75rem' }}>
+                                {aiReviewData.error ? (
+                                    <p style={{ color: 'var(--status-rejected)', fontSize: '0.85rem' }}>{aiReviewData.error}</p>
+                                ) : (
+                                    <>
+                                        <div style={{ fontSize: '0.85rem', fontWeight: 600, marginBottom: '0.5rem', color: 'var(--accent)' }}>
+                                            <Sparkles size={14} style={{ display: 'inline', marginRight: '4px' }} />
+                                            AI Review Result
+                                        </div>
+                                        <p style={{ fontSize: '0.83rem', lineHeight: '1.5', color: 'var(--text-secondary)', marginBottom: '0.75rem' }}>
+                                            {aiReviewData.summary}
+                                        </p>
+                                        {aiReviewData.issues && aiReviewData.issues.length > 0 && (
+                                            <div>
+                                                <div style={{ fontSize: '0.8rem', fontWeight: 600, marginBottom: '0.4rem', color: 'var(--status-rejected)' }}>
+                                                    Issues Found ({aiReviewData.issues.length}):
+                                                </div>
+                                                {aiReviewData.issues.map((issue, i) => (
+                                                    <div key={i} style={{
+                                                        fontSize: '0.78rem',
+                                                        padding: '0.35rem 0.5rem',
+                                                        marginBottom: '0.3rem',
+                                                        borderRadius: '4px',
+                                                        background: issue.type === 'error' ? 'rgba(239,68,68,0.08)' : 'rgba(245,158,11,0.08)',
+                                                        border: `1px solid ${issue.type === 'error' ? 'rgba(239,68,68,0.2)' : 'rgba(245,158,11,0.2)'}`
+                                                    }}>
+                                                        <strong>{issue.field}:</strong> {issue.message}
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        )}
+                                        <button
+                                            className="btn btn-ghost btn-sm"
+                                            style={{ marginTop: '0.5rem', fontSize: '0.75rem' }}
+                                            onClick={() => { setShowAiReview(false); setAiReviewData(null); }}
+                                        >
+                                            Tutup
+                                        </button>
+                                    </>
+                                )}
+                            </div>
+                        )}
+                    </div>
+
                     <div className="card approval-chain-card">
                         <h3 className="card-title">
                             <Shield size={16} /> Approval Chain
@@ -389,7 +466,6 @@ export default function DocumentDetail() {
                         )}
                     </div>
 
-                    {/* Action Buttons */}
                     {canApprove() && (
                         <div className="detail-actions" style={{ flexDirection: 'column', alignItems: 'stretch' }}>
                             <textarea
@@ -421,7 +497,6 @@ export default function DocumentDetail() {
                 </div>
             </div>
 
-            {/* Visual Signature Modal */}
             {showSignatureModal && (
                 <ApprovalSignatureModal
                     pdfBlobUrl={pdfBlobUrl}

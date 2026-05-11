@@ -1,4 +1,4 @@
-import { eq, desc, sql, and, gte, lte, isNull } from 'drizzle-orm';
+import { eq, desc, sql, and, gte, lte, isNull, like, or } from 'drizzle-orm';
 import fs from 'fs';
 import path from 'path';
 import { db } from '../db/index.js';
@@ -9,18 +9,35 @@ import { LogService } from './log.service.js';
 export const DocumentService = {
 
     /**
+     * Generate sequential display ID within a transaction.
+     * Format: {PREFIX}-{YEAR}-{SEQ} (e.g., PO-2026-0042)
+     */
+    async generateDisplayId(tx, category) {
+        const year = new Date().getFullYear();
+        const prefix = category === 'Purchase Order' ? 'PO' : 
+                       category === 'Cash Advance' ? 'CA' : 
+                       category === 'Petty Cash' ? 'PC' : 'MM';
+        
+        // Count existing docs with this prefix+year for sequential numbering
+        const [result] = await tx.select({
+            count: sql`COUNT(*)::int`
+        })
+        .from(document)
+        .where(like(document.displayId, `${prefix}-${year}-%`));
+        
+        const seq = (result?.count || 0) + 1;
+        return `${prefix}-${year}-${String(seq).padStart(4, '0')}`;
+    },
+
+    /**
      * Create a new document and initialize its approval chain.
      */
     async createDocument(data) {
         const { title, category, subCategory, branch, department, notes, filePath, originalName, uploadedBy, dynamicDepartments = [] } = data;
 
         return await db.transaction(async (tx) => {
-            // 1. Generate displayId based on category, year, and sequence
-            // This is a simplified ID generation for demonstration
-            const year = new Date().getFullYear();
-            const randomSeq = Math.floor(1000 + Math.random() * 9000); // 4 digit random
-            const prefix = category === 'Purchase Order' ? 'PO' : category === 'Cash Advance' ? 'CA' : category === 'Petty Cash' ? 'PC' : 'MM';
-            const displayId = `${prefix}-${year}-${randomSeq}`;
+            // 1. Generate sequential displayId
+            const displayId = await DocumentService.generateDisplayId(tx, category);
 
             // Rename the uploaded file
             let finalFilePath = filePath;
@@ -41,7 +58,7 @@ export const DocumentService = {
                     await fs.promises.rename(filePath, finalFilePath);
                 } catch (err) {
                     console.error("Failed to rename file:", err);
-                    finalFilePath = filePath; // fallback to multer assigned name
+                    finalFilePath = filePath;
                 }
             }
 
@@ -62,7 +79,6 @@ export const DocumentService = {
             // 3. Find workflow for this category, branch, and subCategory
             console.log(`[DocumentService] Looking for workflow: category="${category}", branch="${branch}", subCategory="${subCategory || 'null'}"`);
             
-            // Try exact match: category + branch + subCategory
             let wf = [];
             if (subCategory) {
                 wf = await tx.select().from(workflow)
@@ -73,9 +89,8 @@ export const DocumentService = {
                     ))
                     .limit(1);
                     
-                // Fallback: category + 'All' branch + subCategory
                 if (wf.length === 0) {
-                    console.log(`[DocumentService] No branch-specific workflow with subCategory. Trying branch="All" + subCategory="${subCategory}"`);
+                    console.log(`[DocumentService] Trying branch="All" + subCategory="${subCategory}"`);
                     wf = await tx.select().from(workflow)
                         .where(and(
                             eq(workflow.category, category),
@@ -86,9 +101,8 @@ export const DocumentService = {
                 }
             }
 
-            // Fallback: category + branch + null subCategory
             if (wf.length === 0) {
-                console.log(`[DocumentService] No subCategory workflow found. Trying default: category + branch + null subCategory`);
+                console.log(`[DocumentService] Trying default: category + branch + null subCategory`);
                 wf = await tx.select().from(workflow)
                     .where(and(
                         eq(workflow.category, category),
@@ -98,9 +112,8 @@ export const DocumentService = {
                     .limit(1);
             }
 
-            // Final fallback: category + 'All' + null subCategory
             if (wf.length === 0) {
-                console.log(`[DocumentService] No specific branch workflow found. Falling back to branch="All"`);
+                console.log(`[DocumentService] Falling back to branch="All"`);
                 wf = await tx.select().from(workflow)
                     .where(and(
                         eq(workflow.category, category),
@@ -112,14 +125,12 @@ export const DocumentService = {
 
             if (wf.length > 0) {
                 console.log(`[DocumentService] Selected Workflow ID: ${wf[0].id}`);
-                // 4. Fetch workflow steps
                 const steps = await tx.select().from(workflowStep)
                     .where(eq(workflowStep.workflowId, wf[0].id))
                     .orderBy(workflowStep.stepOrder);
 
                 console.log(`[DocumentService] Found ${steps.length} workflow steps`);
 
-                // 5. Create approval chain entries
                 if (steps.length > 0) {
                     const approvalsToInsert = steps.map((step, index) => {
                         let targetDepartment = null;
@@ -135,7 +146,7 @@ export const DocumentService = {
                             documentId: newDoc.id,
                             stepOrder: step.stepOrder,
                             roleRequired: step.roleRequired,
-                            targetDepartment, // Add target department derived from dynamic config
+                            targetDepartment,
                             assignedUserId: null,
                             status: index === 0 ? 'PENDING' : 'LOCKED',
                         };
@@ -146,7 +157,6 @@ export const DocumentService = {
 
                     if (insertedApprovals.length > 0) {
                         const firstStep = insertedApprovals[0];
-                        // Pass targetDepartment or fallback to the document's general department (if any)
                         await ApprovalService.assignStepToUser(
                             tx, 
                             firstStep.id, 
@@ -159,11 +169,10 @@ export const DocumentService = {
                     throw new Error(`Workflow found but contains no steps for category: ${category}`);
                 }
             } else {
-                console.error(`[DocumentService] CRITICAL: No workflow defined for category "${category}" at branch "${branch}" or "All"`);
+                console.error(`[DocumentService] CRITICAL: No workflow defined for category "${category}"`);
                 throw new Error(`Manajemen tidak menemukan Alur Persetujuan (Workflow) untuk kategori "${category}". Mohon hubungi Administrator.`);
             }
 
-            // Log the upload event (fire-and-forget, outside transaction)
             LogService.createLog(
                 uploadedBy,
                 'DOCUMENT_UPLOADED',
@@ -178,8 +187,8 @@ export const DocumentService = {
     },
 
     /**
-     * Get all documents with optional date range filtering.
-     * @param {Object} filters - Optional filters: { startDate, endDate }
+     * Get all documents with optional filters AND pagination.
+     * @param {Object} filters - { startDate, endDate, subCategory, page, limit }
      */
     async listDocuments(filters = {}) {
         const conditions = [];
@@ -188,11 +197,38 @@ export const DocumentService = {
             conditions.push(gte(document.createdAt, new Date(filters.startDate)));
         }
         if (filters.endDate) {
-            // Set endDate to end of day
             const endOfDay = new Date(filters.endDate);
             endOfDay.setHours(23, 59, 59, 999);
             conditions.push(lte(document.createdAt, endOfDay));
         }
+        if (filters.subCategory) {
+            conditions.push(eq(document.subCategory, filters.subCategory));
+        }
+        if (filters.branch && filters.branch !== 'All') {
+            conditions.push(eq(document.branch, filters.branch));
+        }
+        if (filters.status) {
+            conditions.push(eq(document.status, filters.status));
+        }
+        if (filters.search) {
+            conditions.push(or(
+                like(document.title, `%${filters.search}%`),
+                like(document.displayId, `%${filters.search}%`),
+                like(document.notes, `%${filters.search}%`)
+            ));
+        }
+
+        // Get total count
+        let countQuery = db.select({ count: sql`COUNT(*)::int` }).from(document);
+        if (conditions.length > 0) {
+            countQuery = countQuery.where(and(...conditions));
+        }
+        const [{ count: total }] = await countQuery;
+
+        // Pagination
+        const page = Math.max(1, parseInt(filters.page) || 1);
+        const limit = Math.min(100, Math.max(1, parseInt(filters.limit) || 20));
+        const offset = (page - 1) * limit;
 
         let query = db.select({
             document: document,
@@ -208,12 +244,20 @@ export const DocumentService = {
         const docs = await query.orderBy(
             sql`CASE WHEN ${document.status} = 'PENDING' THEN 0 WHEN ${document.status} = 'APPROVED' THEN 1 ELSE 2 END`,
             desc(document.createdAt)
-        );
+        ).limit(limit).offset(offset);
         
-        return docs.map(d => ({
-            ...d.document,
-            uploaderUser: { name: d.uploaderName }
-        }));
+        return {
+            data: docs.map(d => ({
+                ...d.document,
+                uploaderUser: { name: d.uploaderName }
+            })),
+            pagination: {
+                page,
+                limit,
+                total,
+                totalPages: Math.ceil(total / limit)
+            }
+        };
     },
 
     /**
@@ -244,11 +288,31 @@ export const DocumentService = {
     },
 
     /**
+     * Check if a user can approve a specific document (efficient single query)
+     */
+    async canUserApproveDocument(documentId, userId, role) {
+        const pending = await db.select({ id: approval.id })
+            .from(approval)
+            .where(and(
+                eq(approval.documentId, documentId),
+                eq(approval.status, 'PENDING'),
+                or(
+                    eq(approval.assignedUserId, userId),
+                    and(
+                        isNull(approval.assignedUserId),
+                        eq(approval.roleRequired, role)
+                    )
+                )
+            ))
+            .limit(1);
+        return pending.length > 0;
+    },
+
+    /**
      * Delete document by ID (and cascade to approvals)
      */
     async deleteDocument(documentId) {
         return await db.transaction(async (tx) => {
-            // Approvals cascade is configured or deleted manually here
             await tx.delete(approval).where(eq(approval.documentId, documentId));
             const deleted = await tx.delete(document).where(eq(document.id, documentId)).returning();
             return deleted.length > 0;

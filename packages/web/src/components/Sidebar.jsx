@@ -16,6 +16,7 @@ import {
     ChevronsRight,
     Building2,
     ClipboardList,
+    Bot,
 } from 'lucide-react';
 import './Sidebar.css';
 import logoImg from '../assets/logo.png';
@@ -25,6 +26,7 @@ const mainNav = [
     { label: 'Documents', icon: FileText, path: '/documents' },
     { label: 'Upload', icon: Upload, path: '/documents/upload' },
     { label: 'My Approvals', icon: CheckCircle, path: '/approvals' },
+    { label: 'AI Assistant', icon: Bot, path: '/ai-chat' },
 ];
 
 const adminNav = [
@@ -51,8 +53,8 @@ export default function Sidebar({ collapsed, onToggle, mobileOpen, onMobileClose
 
     return (
         <>
-            <div className={`sidebar-overlay ${mobileOpen ? 'visible' : ''}`} onClick={onMobileClose} />
-            <aside className={`sidebar ${collapsed ? 'collapsed' : ''} ${mobileOpen ? 'mobile-open' : ''}`}>
+            <div className={'sidebar-overlay ' + (mobileOpen ? 'visible' : '')} onClick={onMobileClose} />
+            <aside className={'sidebar ' + (collapsed ? 'collapsed' : '') + ' ' + (mobileOpen ? 'mobile-open' : '')}>
                 {/* Hotel Logo Area */}
                 <div className="sidebar-logo" style={{ justifyContent: 'center', padding: collapsed ? '20px' : '20px 10px' }}>
                     {collapsed ? (
@@ -71,7 +73,7 @@ export default function Sidebar({ collapsed, onToggle, mobileOpen, onMobileClose
                         value={currentBranch}
                         onChange={(e) => setCurrentBranch(e.target.value)}
                         disabled={userBranches.length <= 1}
-                        title={userBranches.length <= 1 ? "Assigned to a single branch" : "Switch active branch"}
+                        title={userBranches.length <= 1 ? 'Assigned to a single branch' : 'Switch active branch'}
                     >
                         {userBranches.map(branch => (
                             <option key={branch} value={branch}>{branch}</option>
@@ -88,7 +90,7 @@ export default function Sidebar({ collapsed, onToggle, mobileOpen, onMobileClose
                                 key={item.path}
                                 to={item.path}
                                 className={({ isActive }) =>
-                                    `nav-item ${isActive ? 'active' : ''}`
+                                    'nav-item ' + (isActive ? 'active' : '')
                                 }
                                 onClick={onMobileClose}
                             >
@@ -108,7 +110,7 @@ export default function Sidebar({ collapsed, onToggle, mobileOpen, onMobileClose
                                     key={item.path}
                                     to={item.path}
                                     className={({ isActive }) =>
-                                        `nav-item ${isActive ? 'active' : ''}`
+                                        'nav-item ' + (isActive ? 'active' : '')
                                     }
                                     onClick={onMobileClose}
                                 >
@@ -126,7 +128,7 @@ export default function Sidebar({ collapsed, onToggle, mobileOpen, onMobileClose
                         <NavLink
                             to="/settings"
                             className={({ isActive }) =>
-                                `nav-item ${isActive ? 'active' : ''}`
+                                'nav-item ' + (isActive ? 'active' : '')
                             }
                             onClick={onMobileClose}
                         >
@@ -148,7 +150,7 @@ export default function Sidebar({ collapsed, onToggle, mobileOpen, onMobileClose
                 {/* Copyright */}
                 {!collapsed && (
                     <div className="sidebar-copyright">
-                        © {new Date().getFullYear()} muhamad nawawi. All rights reserved.
+                        &copy; {new Date().getFullYear()} muhamad nawawi. All rights reserved.
                     </div>
                 )}
             </aside>

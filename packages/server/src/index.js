@@ -79,6 +79,7 @@ import profileRouter from './routes/profile.route.js';
 import subcategoriesRouter from './routes/subcategories.route.js';
 import logsRouter from './routes/logs.route.js';
 import templatesAdminRouter from './routes/templates.route.js';
+import aiRouter from './routes/ai.route.js';
 
 app.use('/api/documents', docsRouter);
 app.use('/api/approvals', approvalsRouter);
@@ -94,6 +95,7 @@ app.use('/api/profile', profileRouter);
 app.use('/api/subcategories', subcategoriesRouter);
 app.use('/api/logs', logsRouter);
 app.use('/api/admin/templates', templatesAdminRouter);
+app.use('/api/ai', aiRouter);
 
 // Health Check
 app.get('/api/health', (req, res) => {
