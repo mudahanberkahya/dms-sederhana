@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo } from 'react';
 import { api } from '../lib/api';
-import { Plus, Trash2, X, FileText, Edit2, Code, Eye, Monitor, AlertTriangle, Search } from 'lucide-react';
+import { Plus, Trash2, X, FileText, Edit2, Code, Eye, Monitor, AlertTriangle, Search, Database } from 'lucide-react';
 import ReactQuill from 'react-quill-new';
 import 'react-quill-new/dist/quill.snow.css';
 import './Admin.css';
@@ -23,6 +23,22 @@ export default function Templates() {
 
     // Hybrid Editor mode: 'visual' (ReactQuill) or 'html' (textarea)
     const [editorMode, setEditorMode] = useState('visual');
+
+    const handleSeedData = async () => {
+      if (!confirm('Seed data demo? Ini akan membuat template, role, kategori, dan departemen default.')) return;
+      try {
+        const res = await fetch('/api/seed', { method: 'POST' });
+        const data = await res.json();
+        if (data.success) {
+          alert('✅ Seed berhasil!\n' + JSON.stringify(data.counts, null, 2));
+          loadTemplates();
+        } else {
+          alert('Gagal: ' + (data.error || 'Unknown'));
+        }
+      } catch (err) {
+        alert('Error: ' + err.message);
+      }
+    };
 
     const loadTemplates = async () => {
         try {
@@ -302,9 +318,14 @@ export default function Templates() {
                     <h1 className="page-title">Template Management</h1>
                     <p className="page-subtitle">Configure HTML templates for automatic document generation (Puppeteer + Handlebars engine).</p>
                 </div>
-                <button className="btn btn-primary" onClick={() => setShowModal(true)}>
+                <div style={{ display: 'flex', gap: '8px' }}>
+                  <button className="btn btn-secondary" onClick={handleSeedData}>
+                    <Database size={16} /> Seed Demo
+                  </button>
+                  <button className="btn btn-primary" onClick={() => setShowModal(true)}>
                     <Plus size={16} /> Add Template
-                </button>
+                  </button>
+                </div>
             </div>
 
             {error && !showModal && <div className="alert alert-error" style={{ marginBottom: '1rem' }}>{error}</div>}

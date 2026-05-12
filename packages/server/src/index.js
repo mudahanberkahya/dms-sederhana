@@ -80,6 +80,8 @@ import subcategoriesRouter from './routes/subcategories.route.js';
 import logsRouter from './routes/logs.route.js';
 import templatesAdminRouter from './routes/templates.route.js';
 import aiRouter from './routes/ai.route.js';
+import plansRouter from './routes/plans.route.js';
+import seedRouter from './routes/seed.route.js';
 
 app.use('/api/documents', docsRouter);
 app.use('/api/approvals', approvalsRouter);
@@ -96,6 +98,8 @@ app.use('/api/subcategories', subcategoriesRouter);
 app.use('/api/logs', logsRouter);
 app.use('/api/admin/templates', templatesAdminRouter);
 app.use('/api/ai', aiRouter);
+app.use('/api/plans', plansRouter);
+app.use('/api/seed', seedRouter);
 
 // Health Check
 app.get('/api/health', (req, res) => {

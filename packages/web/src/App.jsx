@@ -23,6 +23,8 @@ import Templates from './pages/Templates';
 import AIChat from './pages/AIChat';
 import ErrorBoundary from './components/ErrorBoundary';
 import Landing from './pages/Landing';
+import GuideModal from './pages/GuideModal';
+import { Lightbulb } from 'lucide-react';
 import './App.css';
 export const AppContext = createContext();
 const ProtectedRoute = ({ isAllowed, redirectPath = '/login', children }) => {
@@ -81,6 +83,15 @@ function App() {
       });
     }
   }, [user]);
+  const [showGuide, setShowGuide] = useState(false);
+  
+  // Auto-show guide on first login
+  useEffect(() => {
+    if (isAuthenticated && !localStorage.getItem('dms-onboarding-complete')) {
+      setShowGuide(true);
+    }
+  }, [isAuthenticated]);
+
   if (isPending) {
     return <div className="loading-screen">Loading DMS...</div>;
   }
@@ -121,6 +132,21 @@ function App() {
             <Route path="/" element={<Landing />} />
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
+          {isAuthenticated && (
+            <>
+              <button 
+                className="guide-fab" 
+                onClick={() => setShowGuide(true)}
+                title="Panduan Penggunaan"
+              >
+                <Lightbulb size={20} />
+              </button>
+              <GuideModal 
+                isOpen={showGuide} 
+                onClose={() => setShowGuide(false)} 
+              />
+            </>
+          )}
         </ErrorBoundary>
       </BrowserRouter>
     </AppContext.Provider>
