@@ -83,6 +83,12 @@ function App() {
       });
     }
   }, [user]);
+  if (isPending) {
+    return <div className="loading-screen">Loading DMS...</div>;
+  }
+  const isAuthenticated = !!user;
+  const isAdmin = user?.role === 'admin';
+
   const [showGuide, setShowGuide] = useState(false);
   
   // Auto-show guide on first login
@@ -91,12 +97,6 @@ function App() {
       setShowGuide(true);
     }
   }, [isAuthenticated]);
-
-  if (isPending) {
-    return <div className="loading-screen">Loading DMS...</div>;
-  }
-  const isAuthenticated = !!user;
-  const isAdmin = user?.role === 'admin';
   return (
     <AppContext.Provider value={{ 
         user, currentBranch, setCurrentBranch, userBranches, userDepartment,
