@@ -1,15 +1,14 @@
 import express from 'express';
-import db from '../db/schema.js';
+import { db } from '../db/index.js';
+import { documentTemplate, role, departmentRef, documentCategory, keywordMapping } from '../db/schema.js';
+import { eq, sql } from 'drizzle-orm';
 
 const router = express.Router();
 
 const SEED_TEMPLATES = [
   {
-    displayId: 'TPL-001',
     name: 'Purchase Order',
-    category: 'PO',
-    description: 'Template PO standar untuk procurement barang dan jasa.',
-    content: `<div style="font-family: Arial; max-width: 700px; margin: 0 auto; padding: 20px;">
+    htmlContent: `<div style="font-family: Arial; max-width: 700px; margin: 0 auto; padding: 20px;">
   <h2 style="text-align: center; margin-bottom: 24px;">PURCHASE ORDER</h2>
   <table style="width: 100%; margin-bottom: 20px;">
     <tr><td><strong>No. PO:</strong> {{poNumber}}</td><td style="text-align: right;"><strong>Tanggal:</strong> {{date}}</td></tr>
@@ -40,7 +39,7 @@ const SEED_TEMPLATES = [
     <div><em>(Director)</em></div>
   </div>
 </div>`,
-    fields: JSON.stringify([
+    fieldsConfig: [
       { name: 'poNumber', label: 'Nomor PO', type: 'text', required: true },
       { name: 'date', label: 'Tanggal', type: 'date', required: true },
       { name: 'vendor', label: 'Nama Vendor', type: 'text', required: true },
@@ -49,16 +48,12 @@ const SEED_TEMPLATES = [
         { name: 'qty', label: 'Quantity', type: 'number' },
         { name: 'price', label: 'Harga Satuan', type: 'number' },
         { name: 'total', label: 'Total', type: 'number', readOnly: true }
-      ] }
-    ]),
-    isActive: 1,
+      ]}
+    ]
   },
   {
-    displayId: 'TPL-002',
     name: 'Memo Internal',
-    category: 'MEMO',
-    description: 'Template memo internal untuk komunikasi antar departemen.',
-    content: `<div style="font-family: Arial; max-width: 650px; margin: 0 auto; padding: 30px;">
+    htmlContent: `<div style="font-family: Arial; max-width: 650px; margin: 0 auto; padding: 30px;">
   <div style="text-align: center; border-bottom: 2px solid #333; padding-bottom: 10px; margin-bottom: 20px;">
     <h1>MEMO INTERNAL</h1>
     <p><strong>No:</strong> {{memoNumber}} | <strong>Tanggal:</strong> {{date}}</p>
@@ -76,7 +71,7 @@ const SEED_TEMPLATES = [
     <p><em>{{fromName}}</em></p>
   </div>
 </div>`,
-    fields: JSON.stringify([
+    fieldsConfig: [
       { name: 'memoNumber', label: 'Nomor Memo', type: 'text', required: true },
       { name: 'date', label: 'Tanggal', type: 'date', required: true },
       { name: 'from', label: 'Dari (Departemen)', type: 'text', required: true },
@@ -85,15 +80,11 @@ const SEED_TEMPLATES = [
       { name: 'subject', label: 'Perihal', type: 'text', required: true },
       { name: 'priority', label: 'Prioritas', type: 'select', options: ['Rendah', 'Normal', 'Tinggi', 'Urgen'], required: true },
       { name: 'content', label: 'Isi Memo', type: 'textarea', required: true },
-    ]),
-    isActive: 1,
+    ]
   },
   {
-    displayId: 'TPL-003',
-    name: 'Surat Perintah Kerja (SPK)',
-    category: 'SPK',
-    description: 'Template SPK untuk pekerjaan/ proyek internal.',
-    content: `<div style="font-family: Arial; max-width: 700px; margin: 0 auto; padding: 20px;">
+    name: 'Surat Perintah Kerja',
+    htmlContent: `<div style="font-family: Arial; max-width: 700px; margin: 0 auto; padding: 20px;">
   <h2 style="text-align: center; margin-bottom: 24px;">SURAT PERINTAH KERJA</h2>
   <p><strong>No. SPK:</strong> {{spkNumber}}</p>
   <p><strong>Tanggal:</strong> {{date}}</p>
@@ -117,7 +108,7 @@ const SEED_TEMPLATES = [
     </div>
   </div>
 </div>`,
-    fields: JSON.stringify([
+    fieldsConfig: [
       { name: 'spkNumber', label: 'Nomor SPK', type: 'text', required: true },
       { name: 'date', label: 'Tanggal', type: 'date', required: true },
       { name: 'assignee', label: 'Kepada (Nama)', type: 'text', required: true },
@@ -127,15 +118,11 @@ const SEED_TEMPLATES = [
       { name: 'endDate', label: 'Selesai', type: 'date', required: true },
       { name: 'description', label: 'Deskripsi', type: 'textarea', required: true },
       { name: 'budget', label: 'Estimasi Biaya', type: 'number', required: true },
-    ]),
-    isActive: 1,
+    ]
   },
   {
-    displayId: 'TPL-004',
     name: 'Form Cuti / Izin',
-    category: 'HR',
-    description: 'Template pengajuan cuti tahunan, izin, atau sakit.',
-    content: `<div style="font-family: Arial; max-width: 600px; margin: 0 auto; padding: 20px;">
+    htmlContent: `<div style="font-family: Arial; max-width: 600px; margin: 0 auto; padding: 20px;">
   <h2 style="text-align: center; margin-bottom: 24px;">FORM PENGAJUAN CUTI / IZIN</h2>
   <table style="width: 100%; margin-bottom: 20px;">
     <tr><td style="width: 140px;"><strong>Nama:</strong></td><td>{{employeeName}}</td></tr>
@@ -155,7 +142,7 @@ const SEED_TEMPLATES = [
     <div><em>Atasan</em><div style="margin-top: 35px;">(________________)</div></div>
   </div>
 </div>`,
-    fields: JSON.stringify([
+    fieldsConfig: [
       { name: 'employeeName', label: 'Nama Karyawan', type: 'text', required: true },
       { name: 'employeeId', label: 'NIK', type: 'text', required: true },
       { name: 'department', label: 'Departemen', type: 'text', required: true },
@@ -167,127 +154,96 @@ const SEED_TEMPLATES = [
       { name: 'address', label: 'Alamat Selama Cuti', type: 'textarea' },
       { name: 'phone', label: 'No. HP', type: 'text', required: true },
       { name: 'delegate', label: 'Delegasi Tugas ke', type: 'text' },
-    ]),
-    isActive: 1,
-  },
+    ]
+  }
 ];
 
-// POST /api/seed — seed data (admin only, auto-detected)
+// POST /api/seed — seed data
 router.post('/', async (req, res) => {
   try {
-    // Insert templates if they don't exist
-    let insertedCount = 0;
+    const counts = { templates: 0, roles: 0, departments: 0, categories: 0 };
+
+    // 1. Seed templates (check by name)
     for (const tpl of SEED_TEMPLATES) {
-      const existing = await new Promise((resolve, reject) => {
-        db.get('SELECT id FROM templates WHERE displayId = ?', [tpl.displayId], (err, row) => {
-          if (err) reject(err);
-          else resolve(row);
+      const existing = await db.select({ id: documentTemplate.id })
+        .from(documentTemplate)
+        .where(eq(documentTemplate.name, tpl.name))
+        .limit(1);
+      if (existing.length === 0) {
+        await db.insert(documentTemplate).values({
+          name: tpl.name,
+          htmlContent: tpl.htmlContent,
+          fieldsConfig: tpl.fieldsConfig,
+          isActive: true,
+          requireCreatorSignature: false,
         });
-      });
-      if (!existing) {
-        await new Promise((resolve, reject) => {
-          db.run(
-            `INSERT INTO templates (displayId, name, category, description, content, fields, isActive, createdAt, updatedAt)
-             VALUES (?, ?, ?, ?, ?, ?, ?, datetime('now'), datetime('now'))`,
-            [tpl.displayId, tpl.name, tpl.category, tpl.description, tpl.content, tpl.fields, tpl.isActive],
-            function (err) { if (err) reject(err); else resolve(this); }
-          );
-        });
-        insertedCount++;
+        counts.templates++;
       }
     }
 
-    // Ensure basic roles exist
-    const defaultRoles = ['admin', 'manager', 'staff'];
-    let rolesCount = 0;
-    for (const roleName of defaultRoles) {
-      const existing = await new Promise((resolve, reject) => {
-        db.get('SELECT id FROM roles WHERE name = ?', [roleName], (err, row) => {
-          if (err) reject(err);
-          else resolve(row);
-        });
-      });
-      if (!existing) {
-        await new Promise((resolve, reject) => {
-          db.run('INSERT INTO roles (name, createdAt, updatedAt) VALUES (?, datetime(\'now\'), datetime(\'now\'))',
-            [roleName], function (err) { if (err) reject(err); else resolve(this); }
-          );
-        });
-        rolesCount++;
-      }
-    }
-
-    // Ensure basic departments
-    const defaultDepts = ['GENERAL', 'FINANCE', 'HR', 'OPERATIONS', 'IT', 'MARKETING'];
-    let deptsCount = 0;
-    for (const deptName of defaultDepts) {
-      const existing = await new Promise((resolve, reject) => {
-        db.get('SELECT id FROM departments WHERE name = ?', [deptName], (err, row) => {
-          if (err) reject(err);
-          else resolve(row);
-        });
-      });
-      if (!existing) {
-        await new Promise((resolve, reject) => {
-          db.run('INSERT INTO departments (name, createdAt, updatedAt) VALUES (?, datetime(\'now\'), datetime(\'now\'))',
-            [deptName], function (err) { if (err) reject(err); else resolve(this); }
-          );
-        });
-        deptsCount++;
-      }
-    }
-
-    // Ensure basic categories
-    const defaultCats = [
-      { name: 'PO', desc: 'Purchase Order' },
-      { name: 'CA', desc: 'Cash Advance' },
-      { name: 'MEMO', desc: 'Memo Internal' },
-      { name: 'SPK', desc: 'Surat Perintah Kerja' },
-      { name: 'HR', desc: 'HR & Kepegawaian' },
-      { name: 'INVOICE', desc: 'Invoice & Tagihan' },
+    // 2. Seed roles
+    const defaultRoles = [
+      { id: 'admin', name: 'Admin' },
+      { id: 'manager', name: 'Manager' },
+      { id: 'staff', name: 'Staff' },
+      { id: 'initiator', name: 'Initiator' },
+      { id: 'approver', name: 'Approver' },
     ];
-    let catsCount = 0;
-    for (const cat of defaultCats) {
-      const existing = await new Promise((resolve, reject) => {
-        db.get('SELECT id FROM categories WHERE name = ?', [cat.name], (err, row) => {
-          if (err) reject(err);
-          else resolve(row);
-        });
-      });
-      if (!existing) {
-        await new Promise((resolve, reject) => {
-          db.run('INSERT INTO categories (name, description, createdAt, updatedAt) VALUES (?, ?, datetime(\'now\'), datetime(\'now\'))',
-            [cat.name, cat.desc], function (err) { if (err) reject(err); else resolve(this); }
-          );
-        });
-        catsCount++;
+    for (const r of defaultRoles) {
+      const existing = await db.select({ id: role.id })
+        .from(role)
+        .where(eq(role.id, r.id))
+        .limit(1);
+      if (existing.length === 0) {
+        await db.insert(role).values({ id: r.id, name: r.name });
+        counts.roles++;
       }
     }
 
-    // Ensure "Processed Documents" keyword
-    const kwExisting = await new Promise((resolve, reject) => {
-      db.get('SELECT id FROM keywords WHERE name = ?', ['Processed Documents'], (err, row) => {
-        if (err) reject(err);
-        else resolve(row);
-      });
-    });
-    if (!kwExisting) {
-      await new Promise((resolve, reject) => {
-        db.run('INSERT INTO keywords (name, createdAt, updatedAt) VALUES (?, datetime(\'now\'), datetime(\'now\'))',
-          ['Processed Documents'], function (err) { if (err) reject(err); else resolve(this); }
-        );
-      });
+    // 3. Seed departments
+    const defaultDepts = [
+      { id: 'GENERAL', name: 'General' },
+      { id: 'FINANCE', name: 'Finance' },
+      { id: 'HR', name: 'HR' },
+      { id: 'OPERATIONS', name: 'Operations' },
+      { id: 'IT', name: 'IT' },
+      { id: 'MARKETING', name: 'Marketing' },
+    ];
+    for (const d of defaultDepts) {
+      const existing = await db.select({ id: departmentRef.id })
+        .from(departmentRef)
+        .where(eq(departmentRef.id, d.id))
+        .limit(1);
+      if (existing.length === 0) {
+        await db.insert(departmentRef).values({ id: d.id, name: d.name });
+        counts.departments++;
+      }
+    }
+
+    // 4. Seed categories
+    const defaultCats = [
+      { id: 'PO', name: 'Purchase Order' },
+      { id: 'CA', name: 'Cash Advance' },
+      { id: 'MEMO', name: 'Memo Internal' },
+      { id: 'SPK', name: 'Surat Perintah Kerja' },
+      { id: 'HR', name: 'HR & Kepegawaian' },
+      { id: 'INVOICE', name: 'Invoice & Tagihan' },
+    ];
+    for (const c of defaultCats) {
+      const existing = await db.select({ id: documentCategory.id })
+        .from(documentCategory)
+        .where(eq(documentCategory.id, c.id))
+        .limit(1);
+      if (existing.length === 0) {
+        await db.insert(documentCategory).values({ id: c.id, name: c.name });
+        counts.categories++;
+      }
     }
 
     res.json({
       success: true,
       message: 'Seed data berhasil',
-      counts: {
-        templates: insertedCount,
-        roles: rolesCount,
-        departments: deptsCount,
-        categories: catsCount,
-      }
+      counts,
     });
   } catch (err) {
     console.error('Seed error:', err);
